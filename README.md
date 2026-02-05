@@ -2,7 +2,7 @@
 
 Netpulse Multi Optical Monitoring adalah sistem monitoring jaringan berbasis web untuk:
 
-- OLT (Huawei / ZTE)
+- OLT (Hioso)
 - ONU monitoring per PON
 - SFP / QSFP optical power (TX / RX / Loss)
 - SNMP interface discovery
