@@ -55,7 +55,6 @@ $ifDescr = @snmp2_walk($ip, $community, '1.3.6.1.2.1.2.2.1.2');
 $ifAlias = @snmp2_walk($ip, $community, '1.3.6.1.2.1.31.1.1.1.18');
 $ifOper = @snmp2_walk($ip, $community, '1.3.6.1.2.1.2.2.1.8');
 
-
 if (!$ifIndex || !$ifName) {
     echo json_encode(['success' => false, 'error' => 'Cannot read IF-MIB']);
     exit;
@@ -84,7 +83,6 @@ $opticalNames = snmp2_walk(
 );
 
 foreach ($opticalNames as $oid => $val) {
-
     $optIfName = trim(str_replace(['STRING:', '"'], '', $val));
 
     if (!isset($ifNameMap[$optIfName])) {
@@ -104,15 +102,18 @@ foreach ($opticalNames as $oid => $val) {
         "1.3.6.1.4.1.14988.1.1.19.1.1.10.$ifIdx"
     );
 
-    if (
-        preg_match('/-?\d+/', $txRaw, $m1) &&
-        preg_match('/-?\d+/', $rxRaw, $m2)
-    ) {
-        $opticalMap[$optIfName] = [
-            'optical_index' => null, // optional
-            'tx' => $m1[0] / 1000,
-            'rx' => $m2[0] / 1000
-        ];
+    if ($txRaw !== false && $rxRaw !== false) {
+        $txMatch = preg_match('/-?\d+/', $txRaw, $m1);
+        $rxMatch = preg_match('/-?\d+/', $rxRaw, $m2);
+        
+        if ($txMatch && $rxMatch) {
+            $opticalMap[$optIfName] = [
+                'optical_index' => null,
+                'tx' => $m1[0] / 1000,
+                'rx' => $m2[0] / 1000,
+                'oper' => 1 // Diasumsikan up karena dapat membaca power
+            ];
+        }
     }
 }
 
@@ -122,12 +123,13 @@ foreach ($opticalNames as $oid => $val) {
 $stmt = $conn->prepare("
 INSERT INTO interfaces
 (device_id,if_index,if_name,if_alias,if_description,
- optical_index,rx_power,tx_power,last_seen,is_sfp,interface_type)
-VALUES (?,?,?,?,?,?,?,?,NOW(),?,?)
+ optical_index,rx_power,tx_power,oper_status,last_seen,is_sfp,interface_type)
+VALUES (?,?,?,?,?,?,?,?,?,NOW(),?,?)
 ON DUPLICATE KEY UPDATE
  optical_index=VALUES(optical_index),
  rx_power=VALUES(rx_power),
  tx_power=VALUES(tx_power),
+ oper_status=VALUES(oper_status),
  last_seen=NOW(),
  is_sfp=VALUES(is_sfp),
  interface_type=VALUES(interface_type)
@@ -135,26 +137,22 @@ ON DUPLICATE KEY UPDATE
 
 $inserted = 0;
 $sfpCount = 0;
+$downSfpCount = 0;
 
 /* =========================================================
- *  LOOP INTERFACES
+ *  LOOP INTERFACES - PERUBAHAN UTAMA: PROSES SEMUA, TIDAK HANYA UP
  * ========================================================= */
 foreach ($ifIndex as $i => $raw) {
-
-    if (!isset($ifOper[$i]))
-        continue;
-
-    $oper = (int) filter_var($ifOper[$i], FILTER_SANITIZE_NUMBER_INT);
-
-    /* hanya interface UP */
-    if ($oper !== 1)
-        continue;
-
-
     $ifIdx = (int) filter_var($raw, FILTER_SANITIZE_NUMBER_INT);
     $name = trim(str_replace(['STRING:', '"'], '', $ifName[$i] ?? ''));
     $alias = trim(str_replace(['STRING:', '"'], '', $ifAlias[$i] ?? $name));
     $desc = trim(str_replace(['STRING:', '"'], '', $ifDescr[$i] ?? $name));
+    
+    // Ambil status operasional (default ke 2 = down jika tidak ada)
+    $oper = 2; // default down
+    if (isset($ifOper[$i])) {
+        $oper = (int) filter_var($ifOper[$i], FILTER_SANITIZE_NUMBER_INT);
+    }
 
     $isSfp = 0;
     $type = 'other';
@@ -162,57 +160,67 @@ foreach ($ifIndex as $i => $raw) {
     $tx = null;
     $rx = null;
 
+    // Deteksi apakah ini interface SFP/QSFP
     if (
         stripos($name, 'sfp') !== false ||
         stripos($name, 'xgigabit') !== false ||
-        stripos($name, '100ge') !== false
+        stripos($name, '100ge') !== false ||
+        stripos($name, 'gpon') !== false ||
+        stripos($name, 'xpon') !== false
     ) {
         $isSfp = 1;
 
         if (stripos($name, '100ge') !== false) {
             $type = 'QSFP+';
+        } elseif (stripos($name, 'gpon') !== false || stripos($name, 'xpon') !== false) {
+            $type = 'PON';
         } else {
             $type = 'SFP+';
         }
     }
 
     /* ===============================
-   GET OPTIC POWER
-=============================== */
-
+       GET OPTIC POWER - PERUBAHAN UTAMA
+    =============================== */
     if ($isSfp) {
-
-        /* ==== MikroTik ==== */
-        if (isset($opticalMap[$name])) {
-
-            $optIdx = $opticalMap[$name]['optical_index'];
-            $tx = $opticalMap[$name]['tx'];
-            $rx = $opticalMap[$name]['rx'];
-
-        } elseif (stripos($device['device_name'], 'huawei') !== false) {
-
-            $cmd = __DIR__ . "/../huawei_telnet_expect.sh " . escapeshellarg($name);
-
-            $out = [];
-            exec("timeout 20s $cmd", $out);
-            usleep(300000); 
-
-            if ($rc !== 0)
-                continue;
-
-            foreach ($out as $l) {
-                if (strpos($l, 'TX=') === 0)
-                    $tx = floatval(substr($l, 3));
-                if (strpos($l, 'RX=') === 0)
-                    $rx = floatval(substr($l, 3));
+        /* ==== Interface UP ==== */
+        if ($oper == 1) {
+            /* MikroTik optical map */
+            if (isset($opticalMap[$name])) {
+                $optIdx = $opticalMap[$name]['optical_index'];
+                $tx = $opticalMap[$name]['tx'];
+                $rx = $opticalMap[$name]['rx'];
+            } 
+            /* Huawei device - coba telnet */
+            elseif (stripos($device['device_name'], 'huawei') !== false) {
+                $cmd = __DIR__ . "/../huawei_telnet_expect.sh " . escapeshellarg($name);
+                $out = [];
+                $rc = 0;
+                exec("timeout 20s $cmd 2>&1", $out, $rc);
+                
+                if ($rc === 0) {
+                    foreach ($out as $l) {
+                        if (strpos($l, 'TX=') === 0)
+                            $tx = floatval(substr($l, 3));
+                        if (strpos($l, 'RX=') === 0)
+                            $rx = floatval(substr($l, 3));
+                    }
+                }
             }
         }
-
+        /* ==== Interface DOWN ==== */
+        else {
+            // Set default -40 dBm untuk interface down
+            $rx = -40.00;
+            $tx = null; // TX tidak terukur saat down
+            
+            $downSfpCount++;
+        }
     }
 
     /* ===== INSERT / UPDATE INTERFACES ===== */
     $stmt->bind_param(
-        'iisssiddis',
+        'iisssiddiis',
         $device_id,
         $ifIdx,
         $name,
@@ -221,27 +229,28 @@ foreach ($ifIndex as $i => $raw) {
         $optIdx,
         $rx,
         $tx,
+        $oper,
         $isSfp,
         $type
     );
 
     if ($stmt->execute()) {
         $inserted++;
-        if ($isSfp)
+        if ($isSfp) {
             $sfpCount++;
+        }
     }
 
-    /* ===== INSERT HISTORY (INI KUNCI) ===== */
-    if ($isSfp && $tx !== null && $rx !== null) {
-
-        $loss = $tx - $rx;
-
+    /* ===== INSERT HISTORY (KUNCI: SIMPAN JUGA SAAT DOWN) ===== */
+    if ($isSfp && $rx !== null) {
+        $loss = ($tx !== null && $rx !== null) ? ($tx - $rx) : null;
+        
         $stmtHist = $conn->prepare("
             INSERT INTO interface_stats
             (device_id, if_index, tx_power, rx_power, loss, created_at)
             VALUES (?, ?, ?, ?, ?, NOW())
         ");
-
+        
         $stmtHist->bind_param(
             'iiddd',
             $device_id,
@@ -250,38 +259,39 @@ foreach ($ifIndex as $i => $raw) {
             $rx,
             $loss
         );
-
+        
         $stmtHist->execute();
-
+        
+        // Update interfaces dengan nilai terbaru
         $stmtUpd = $conn->prepare("
-    UPDATE interfaces
-    SET rx_power=?, tx_power=?, updated_at=NOW()
-    WHERE device_id=? AND if_index=?
-");
-
+            UPDATE interfaces
+            SET rx_power=?, tx_power=?, oper_status=?, updated_at=NOW()
+            WHERE device_id=? AND if_index=?
+        ");
+        
         $stmtUpd->bind_param(
-            'ddii',
+            'ddiii',
             $rx,
             $tx,
+            $oper,
             $device_id,
             $ifIdx
         );
-
+        
         $stmtUpd->execute();
-
     }
 }
 
 /* =========================================================
  *  OUTPUT
  * ========================================================= */
-
 $result = [
     'success' => true,
     'inserted' => $inserted,
     'sfp_count' => $sfpCount,
+    'sfp_down_count' => $downSfpCount,
     'optical_found' => count($opticalMap),
-    'message' => "Discover OK: $inserted interfaces ($sfpCount SFP/QSFP)"
+    'message' => "Discover OK: $inserted interfaces ($sfpCount SFP/QSFP, $downSfpCount down)"
 ];
 
 if (!$isCli) {
@@ -289,4 +299,4 @@ if (!$isCli) {
 }
 
 return $result;
-
+?>

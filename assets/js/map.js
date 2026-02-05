@@ -12,7 +12,7 @@ let clickedLatLng = null;
 // Icon definitions
 const nodeIcons = {
     router: { icon: 'fa-router', color: '#667eea' },
-    switch: { icon: 'fa-ethernet', color: '#f093fb' },
+    switch: { icon: 'fa-server', color: '#f093fb' },
     firewall: { icon: 'fa-shield-alt', color: '#f5576c' },
     ap: { icon: 'fa-wifi', color: '#4facfe' },
     server: { icon: 'fa-server', color: '#43e97b' },
@@ -107,6 +107,7 @@ function testMarker() {
     });
 
     const marker = L.marker([0, 0], { icon: testIcon }).addTo(map);
+
     marker.bindPopup('Test marker - Map is working!').openPopup();
 
     console.log('Test marker added');
@@ -148,7 +149,6 @@ function createNodeMarker(node) {
                 <i class="fas ${icon.icon}"></i>
                 <div class="node-status ${node.status === 'OK' ? 'up' : 'down'}"></div>
             </div>
-            <div class="node-label">${node.node_name}</div>
         </div>
     `;
 
@@ -163,6 +163,14 @@ function createNodeMarker(node) {
         }),
         draggable: true
     }).addTo(map);
+    marker.bindTooltip(node.node_name, {
+        permanent:  false,
+        direction: 'top',
+        offset: [0, -28],
+        className: 'leaflet-node-label',
+        sticky: true 
+    });
+
     if (mapLocked || node.is_locked == 1) {
         marker.dragging.disable();
     }

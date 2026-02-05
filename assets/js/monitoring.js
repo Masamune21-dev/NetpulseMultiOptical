@@ -195,9 +195,18 @@ function loadChart() {
     )
         .then(r => r.json())
         .then(data => {
-            if (!data.length) return;
+            if (!data.length) {
+                // Tampilkan pesan atau chart kosong
+                updateStats([-40]); // Default -40 dBm
+                return;
+            }
 
-            const rx = data.map(d => Number(d.rx_power));
+            // Filter dan map data
+            const rx = data.map(d => {
+                let value = Number(d.rx_power);
+                // Jika null/NaN, set ke -40 (interface down)
+                return isNaN(value) ? -40 : value;
+            });
 
             let labels = data.map(d =>
                 new Date(d.created_at.replace(' ', 'T'))
@@ -213,7 +222,8 @@ function loadChart() {
                     labels.push(
                         new Date(data[i].created_at.replace(' ', 'T'))
                     );
-                    rxData.push(rx[i]);
+                    let value = Number(data[i].rx_power);
+                    rxData.push(isNaN(value) ? -40 : value);
                 }
             }
 
@@ -235,9 +245,9 @@ function loadChart() {
 
                 const formats = {
                     '1h': { hour: '2-digit', minute: '2-digit' },
-                    '1d': { hour: '2-digit', minute: '2-digit' }, // ⬅️ FIX
-                    '3d': { weekday: 'short', hour: '2-digit' },  // ⬅️ ada HARI
-                    '7d': { weekday: 'short', day: '2-digit' },   // ⬅️ Sen 12
+                    '1d': { hour: '2-digit', minute: '2-digit' },
+                    '3d': { weekday: 'short', hour: '2-digit' },
+                    '7d': { weekday: 'short', day: '2-digit' },
                     '30d': { day: '2-digit', month: 'short' },
                     '1y': { month: 'short', year: '2-digit' }
                 };
@@ -251,8 +261,21 @@ function loadChart() {
             chart.data.labels = labels;
             chart.data.datasets[0].data = rxData;
 
+            // Update chart warna untuk nilai -40 (interface down)
+            chart.data.datasets[0].segment = {
+                borderColor: ctx => {
+                    return ctx.p1.parsed.y === -40 ?
+                        'rgba(255, 99, 132, 0.5)' : // Merah untuk interface down
+                        '#b53fec'; // Ungu normal
+                }
+            };
+
             chart.update();
             updateStats(rx);
+        })
+        .catch(err => {
+            console.error('Error loading chart:', err);
+            updateStats([-40]); // Fallback ke -40 dBm
         });
 }
 
@@ -260,13 +283,43 @@ function loadChart() {
    STATS
 ====================================================== */
 function updateStats(rx) {
+    if (!rx || rx.length === 0) {
+        document.getElementById('rxStats').innerHTML = `
+            Now <b>-40.00 dBm</b>
+            Avg <b>-40.00 dBm</b>
+            Min <b>-40.00 dBm</b>
+            Max <b>-40.00 dBm</b>
+            <span style="color:#ff6b6b">(Interface Down)</span>
+        `;
+        return;
+    }
+
     const now = rx.at(-1);
-    const avg = rx.reduce((a, b) => a + b, 0) / rx.length;
+
+    // Filter nilai -40 untuk perhitungan avg, min, max
+    const validValues = rx.filter(v => v > -40);
+
+    let avg, min, max;
+
+    if (validValues.length > 0) {
+        avg = validValues.reduce((a, b) => a + b, 0) / validValues.length;
+        min = Math.min(...validValues);
+        max = Math.max(...validValues);
+    } else {
+        // Semua nilai -40 (interface selalu down)
+        avg = -40;
+        min = -40;
+        max = -40;
+    }
+
+    const downIndicator = now === -40 ?
+        ' <span style="color:#ff6b6b">(Down)</span>' :
+        '';
 
     document.getElementById('rxStats').innerHTML = `
-        Now <b>${now.toFixed(2)} dBm</b>
+        Now <b>${now.toFixed(2)} dBm</b>${downIndicator}
         Avg <b>${avg.toFixed(2)} dBm</b>
-        Min <b>${Math.min(...rx).toFixed(2)} dBm</b>
-        Max <b>${Math.max(...rx).toFixed(2)} dBm</b>
+        Min <b>${min.toFixed(2)} dBm</b>
+        Max <b>${max.toFixed(2)} dBm</b>
     `;
 }
