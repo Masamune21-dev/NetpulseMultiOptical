@@ -186,3 +186,112 @@ Add:
 */1 * * * * /usr/bin/php /var/www/NetpulseMultiOptical/api/huawei_discover_optics.php >> /var/www/NetpulseMultiOptical/cron/huawei_cron.log  2>&1
 ```
 
+# 🧪 Manual Test
+
+Discover Interfaces
+```bash
+php api/discover_interfaces.php?device_id=1
+```
+
+Huawei Optical Pull
+```bash
+php api/huawei_discover_optics.php
+```
+
+OLT Collector
+```bash
+php cron/collect_olt.php olt-1
+```
+
+# 📊 Database Tables
+
+Core tables:
+
+- snmp_devices
+- interfaces
+- interface_stats
+- users
+- alerts
+- map_nodes
+- sfp_optical_logs
+
+Runtime OLT data stored in:
+```bash
+storage/olt-x/pon_x_x.json
+```
+
+# 🔐 Security Notes
+
+Sensitive files are ignored:
+```bash
+config/database.php
+config/olt.php
+huawei_telnet_expect.sh
+storage/*
+cron/*.log
+```
+
+Use provided examples:
+
+- database.example.php
+- olt.example.php
+- huawei_telnet_expect.example.sh
+- Never commit credentials.
+
+# 🧠 Architecture Overview
+
+```bash
+SNMP → discover_interfaces.php → interfaces table
+Huawei Telnet → huawei_discover_optics.php → tx/rx DB
+OLT Cron → storage JSON
+Frontend → reads DB + JSON
+```
+
+# 🛑 Common Issues
+
+RX / TX always NULL
+
+Ensure:
+
+- expect installed
+- huawei_telnet_expect.sh executable
+- SNMP community correct
+
+# 📈 Roadmap
+
+- LibreNMS integration
+- Fiber map visualization
+- Alarm threshold engine
+- Telegram alerts
+- Optical history charts
+- Role based access
+
+# ❤️ Credits
+
+Developed for ISP / NOC environment
+Author: Misbakhul Munir
+
+# ⭐ Star This Repo
+
+If this project helps your network operation, please ⭐ it.
+
+
+---
+
+## 🔥 Ini sekarang README kamu sudah level:
+
+✅ enterprise ISP  
+✅ open source ready  
+✅ production deployable  
+✅ professional  
+
+Kalau mau next level lagi, aku bisa bantu:
+
+✅ ER Diagram database  
+✅ docker-compose version  
+✅ auto installer bash  
+✅ systemd service  
+✅ telegram bot alert  
+✅ Grafana integration  
+
+Tinggal bilang 👍
