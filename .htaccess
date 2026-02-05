@@ -1,0 +1,71 @@
+# ===============================
+# BASIC SECURITY
+# ===============================
+Options -Indexes
+ServerSignature Off
+
+# ===============================
+# PROTECT SENSITIVE DIRECTORIES
+# ===============================
+
+# Block direct access to config
+<DirectoryMatch "/(config|cron|storage)/">
+    Require all denied
+</DirectoryMatch>
+
+# Allow API to read storage JSON (read-only)
+<FilesMatch "^pon_.*\.json$">
+    Require all granted
+</FilesMatch>
+
+# ===============================
+# BLOCK DIRECT ACCESS TO LIB FILES
+# ===============================
+<FilesMatch "(^\.|olt_collector\.php|database\.php|security\.php)">
+    Require all denied
+</FilesMatch>
+
+# ===============================
+# PHP SECURITY
+# ===============================
+<IfModule mod_php.c>
+    php_flag display_errors Off
+    php_flag expose_php Off
+</IfModule>
+
+# ===============================
+# SECURITY HEADERS
+# ===============================
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ===============================
+# GZIP COMPRESSION
+# ===============================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain text/html text/css application/javascript application/json
+</IfModule>
+
+# ===============================
+# CACHE STATIC ASSETS
+# ===============================
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    ExpiresByType text/css "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+    ExpiresByType image/png "access plus 30 days"
+    ExpiresByType image/jpeg "access plus 30 days"
+    ExpiresByType image/webp "access plus 30 days"
+</IfModule>
+
+# ===============================
+# DISABLE ACCESS TO LOG FILES
+# ===============================
+<FilesMatch "\.(log|lock|sh)$">
+    Require all denied
+</FilesMatch>

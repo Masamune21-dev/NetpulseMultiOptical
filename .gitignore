@@ -1,0 +1,27 @@
+# ENV / SECRET
+config/database.php
+config/olt.php
+
+# Huawei Telnet credentials
+huawei_telnet_expect.sh
+
+# Logs
+cron/*.log
+
+# Runtime storage
+storage/*
+!storage/.gitkeep
+
+# Vendor
+vendor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Editor
+.vscode/
+.idea/
