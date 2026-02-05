@@ -277,21 +277,3 @@ If this project helps your network operation, please ⭐ it.
 
 
 ---
-
-## 🔥 Ini sekarang README kamu sudah level:
-
-✅ enterprise ISP  
-✅ open source ready  
-✅ production deployable  
-✅ professional  
-
-Kalau mau next level lagi, aku bisa bantu:
-
-✅ ER Diagram database  
-✅ docker-compose version  
-✅ auto installer bash  
-✅ systemd service  
-✅ telegram bot alert  
-✅ Grafana integration  
-
-Tinggal bilang 👍
