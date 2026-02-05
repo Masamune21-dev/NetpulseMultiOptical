@@ -67,6 +67,7 @@ sudo apt install php php-mysql snmp expect bc git
 
 # 📁 Folder Structure
 
+```bash
 mikrotik-crs-monitor/
 │
 ├── api/                # Backend APIs
@@ -77,6 +78,7 @@ mikrotik-crs-monitor/
 ├── includes/          # Layout + Auth
 ├── huawei_telnet_expect.sh
 └── index.php
+```
 
 # 🛠 Installation
 
