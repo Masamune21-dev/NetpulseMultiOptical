@@ -115,14 +115,14 @@ window.testSNMP = function (id) {
     fetch('api/devices.php?test=' + id)
         .then(r => r.json())
         .then(d => {
-            alert(
-                d.status === 'OK'
-                    ? 'SNMP OK\n\n' + d.response
-                    : 'SNMP FAILED\n\n' + d.error
-            );
+            if (d.status === 'OK') {
+                showNotification(`SNMP OK: ${d.response}`, 'success');
+            } else {
+                showNotification(`SNMP FAILED: ${d.error}`, 'error');
+            }
             loadDevices();
         })
-        .catch(() => alert('SNMP error'));
+        .catch(() => showNotification('SNMP error', 'error'));
 };
 
 // ===============================
@@ -164,7 +164,7 @@ async function discoverSelectedInterfaces() {
     const sel = document.getElementById('monitorDeviceSelect');
     const id = sel.value;
 
-    if (!id) return alert('Pilih device dulu');
+    if (!id) return showNotification('Pilih device dulu', 'warning');
 
     const name = sel.selectedOptions[0].text.toLowerCase();
 
@@ -200,7 +200,7 @@ async function discoverSelectedInterfaces() {
     } catch (e) {
 
         console.error(e);
-        alert('Discovery failed');
+        showNotification('Discovery failed', 'error');
 
     }
 }

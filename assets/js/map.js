@@ -381,7 +381,7 @@ async function addNode() {
     const nodeType = document.getElementById('nodeType').value;
 
     if (!clickedLatLng) {
-        alert('Klik map dulu untuk menentukan posisi node');
+        showNotification('Klik map dulu untuk menentukan posisi node', 'warning');
         return;
     }
 
@@ -391,7 +391,7 @@ async function addNode() {
     const iconType = document.getElementById('nodeIcon').value;
 
     if (!nodeName.trim()) {
-        alert('Please enter a node name');
+        showNotification('Please enter a node name', 'warning');
         return;
     }
 
@@ -442,7 +442,7 @@ async function addNode() {
 function editNode(nodeId) {
     const node = nodes.find(n => n.id == nodeId);
     if (!node) {
-        alert('Node not found');
+        showNotification('Node not found', 'error');
         return;
     }
 
@@ -714,24 +714,15 @@ function getPowerClass(power) {
     return 'power-critical';
 }
 
-// Helper: Show notification
+// Use global toast notifications when available
 function showNotification(message, type = 'info') {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
-    `;
-
-    // Add to document
-    document.body.appendChild(notification);
-
-    // Remove after 3 seconds
-    setTimeout(() => {
-        notification.classList.add('fade-out');
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
+    if (window.mikrotikMonitor && typeof window.mikrotikMonitor.showNotification === 'function') {
+        window.mikrotikMonitor.showNotification(message, type);
+        return;
+    }
+    if (typeof window.showNotification === 'function') {
+        window.showNotification(message, type);
+    }
 }
 
 // Modal functions

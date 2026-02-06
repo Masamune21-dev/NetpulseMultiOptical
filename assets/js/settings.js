@@ -41,7 +41,7 @@ function saveTelegram() {
             chat_id: chat_id.value
         })
     })
-    .then(() => alert('Telegram settings saved'));
+    .then(() => showNotification('Telegram settings saved', 'success'));
 }
 
 function saveTheme() {
@@ -54,7 +54,7 @@ function saveTheme() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ theme })
     }).then(() => {
-        alert('Theme saved');
+        showNotification('Theme saved', 'success');
     });
 }
 
@@ -67,12 +67,12 @@ function testTelegram() {
     .then(r => r.json())
     .then(d => {
         if (d && d.success) {
-            alert('Test message sent');
+            showNotification('Test message sent', 'success');
         } else {
-            alert(d.error || 'Failed to send test message');
+            showNotification(d.error || 'Failed to send test message', 'error');
         }
     })
     .catch(() => {
-        alert('Failed to send test message');
+        showNotification('Failed to send test message', 'error');
     });
 }

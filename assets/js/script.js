@@ -147,27 +147,34 @@ function ajaxRequest(url, method = 'GET', data = null) {
 
 // Notification system
 function showNotification(message, type = 'info', duration = 5000) {
-    const container = document.getElementById('notification-container') || createNotificationContainer();
-    
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-        <div class="notification-content">
+    const container = document.getElementById('toast-container') || createToastContainer();
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.setAttribute('role', 'status');
+    toast.innerHTML = `
+        <div class="toast-icon">
             <i class="fas fa-${getNotificationIcon(type)}"></i>
-            <span>${message}</span>
         </div>
-        <button class="notification-close" onclick="this.parentElement.remove()">
+        <div class="toast-body">
+            <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" aria-label="Close">
             <i class="fas fa-times"></i>
         </button>
     `;
-    
-    container.appendChild(notification);
-    
+
+    const closeBtn = toast.querySelector('.toast-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => toast.remove());
+    }
+
+    container.appendChild(toast);
+
     if (duration > 0) {
         setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
+            toast.classList.add('toast-hide');
+            setTimeout(() => toast.remove(), 300);
         }, duration);
     }
 }
@@ -181,10 +188,10 @@ function getNotificationIcon(type) {
     }
 }
 
-function createNotificationContainer() {
+function createToastContainer() {
     const container = document.createElement('div');
-    container.id = 'notification-container';
-    container.className = 'notification-container';
+    container.id = 'toast-container';
+    container.className = 'toast-container';
     document.body.appendChild(container);
     return container;
 }
@@ -441,74 +448,6 @@ window.onerror = function(message, source, lineno, colno, error) {
     return false;
 };
 
-// CSS for notifications
-const notificationCSS = `
-.notification-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
-    max-width: 400px;
-}
-
-.notification {
-    background: white;
-    border-radius: 4px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    margin-bottom: 10px;
-    padding: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-
-.notification-content {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.notification-close {
-    background: none;
-    border: none;
-    color: #999;
-    cursor: pointer;
-    padding: 0;
-    margin-left: 10px;
-}
-
-.notification-close:hover {
-    color: #333;
-}
-
-.notification-success {
-    border-left: 4px solid #28a745;
-}
-
-.notification-error {
-    border-left: 4px solid #dc3545;
-}
-
-.notification-warning {
-    border-left: 4px solid #ffc107;
-}
-
-.notification-info {
-    border-left: 4px solid #17a2b8;
-}
-`;
-
-// Inject notification CSS
-const style = document.createElement('style');
-style.textContent = notificationCSS;
-document.head.appendChild(style);
-
 // Export functions for global use
 window.mikrotikMonitor = {
     formatBytes,
@@ -520,3 +459,6 @@ window.mikrotikMonitor = {
     RealTimeUpdater,
     ChartManager
 };
+
+// Backward compatibility for direct calls
+window.showNotification = showNotification;
