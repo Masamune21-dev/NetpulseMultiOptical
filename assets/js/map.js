@@ -7,6 +7,7 @@ let selectedNode = null;
 let nodeMarkers = [];
 let connectionLines = [];
 let clickedLatLng = null;
+let mapRefreshPaused = false;
 
 
 // Icon definitions
@@ -115,6 +116,10 @@ function testMarker() {
 
 // Load all map data
 async function loadMapData() {
+    if (document.hidden) {
+        mapRefreshPaused = true;
+        return;
+    }
     try {
         const response = await fetch('api/map_nodes.php');
         nodes = await response.json();
@@ -750,4 +755,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     initMap();
+});
+
+// Resume refresh when tab becomes active
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && mapRefreshPaused) {
+        mapRefreshPaused = false;
+        if (map) {
+            loadMapData();
+        }
+    }
 });

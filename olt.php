@@ -89,18 +89,29 @@ if (file_exists($jsonFile)) {
 @media (max-width: 768px) {
     .topbar form {
         width: 100%;
-        gap: 8px;
+        gap: 6px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: center;
+    }
+
+    .topbar label {
+        font-size: 12px;
+        margin-bottom: 2px;
     }
     
     .topbar select {
-        min-width: 100%;
+        min-width: 0;
+        width: 100%;
+        font-size: 13px;
+        padding: 6px 28px 6px 10px;
     }
 }
 </style>
 <div class="topbar">
     <h1>
         <i class="fas fa-server"></i>
-        OLT ONU Monitor
+        OLT Monitor
     </h1>
 
     <form method="get" class="topbar-filters">

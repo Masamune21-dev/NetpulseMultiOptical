@@ -29,19 +29,27 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician'])) {
 
 <!-- TAB SNMP -->
 <div id="snmp" class="tab-content active">
-    <table class="table" id="deviceTable">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>IP</th>
-                <th>SNMP</th>
-                <th>Auth</th>
-                <th>Status</th>
-                <th width="180">Action</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <div class="card">
+        <h3>
+            <i class="fas fa-sliders-h"></i>
+            SNMP Devices
+        </h3>
+        <div class="table-responsive">
+            <table class="table" id="deviceTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>IP</th>
+                        <th>SNMP</th>
+                        <th>Auth</th>
+                        <th>Status</th>
+                        <th width="180">Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <!-- TAB MONITORING -->

@@ -27,11 +27,24 @@ $current = basename($_SERVER['PHP_SELF']);
 
 <body>
     <div class="layout">
+        <header class="mobile-header">
+            <div class="mobile-brand">
+                <div class="mobile-logo">
+                    <i class="fas fa-wave-square"></i>
+                </div>
+                <div class="mobile-titles">
+                    <div class="mobile-title">NetPulse MultiOptical</div>
+                    <div class="mobile-subtitle">Network Optical Monitoring</div>
+                </div>
+            </div>
+        </header>
 
         <!-- SIDEBAR -->
         <aside class="sidebar">
-            <h2>NetPulse MultiOptical</h2>
-            <h3>Network Optical Monitoring</h3>
+            <h2>
+                <i class="fas fa-wave-square"></i>
+                NetPulse MultiOptical
+            </h2>
             <ul>
                 <li class="<?= $current === 'dashboard.php' ? 'active' : '' ?>">
                     <a href="dashboard.php">
@@ -53,7 +66,7 @@ $current = basename($_SERVER['PHP_SELF']);
 
                 <li class="<?= $current === 'map.php' ? 'active' : '' ?>">
                     <a href="map.php">
-                        <i class="fas fa-map-marked-alt"></i><span>Network Map</span>
+                        <i class="fas fa-map-marked-alt"></i><span>Map</span>
                     </a>
                 </li>
 
@@ -88,6 +101,7 @@ $current = basename($_SERVER['PHP_SELF']);
             <!-- TOPBAR -->
             <div class="topbar">
                 <h1><?= ucfirst(str_replace('.php', '', $current)) ?></h1>
+                <div class="header-clock" data-live-clock></div>
                 <div class="user-info">
                     <i class="fas fa-user"></i>
                     <?= htmlspecialchars($user['username']) ?>

@@ -60,5 +60,19 @@ function saveTheme() {
 
 
 function testTelegram() {
-    alert('Test message sent (dummy)');
+    fetch('api/telegram_test.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d && d.success) {
+            alert('Test message sent');
+        } else {
+            alert(d.error || 'Failed to send test message');
+        }
+    })
+    .catch(() => {
+        alert('Failed to send test message');
+    });
 }

@@ -22,6 +22,31 @@ $ifCount = $data['interface_count'] ?? 0;
 $sfpCount = $data['sfp_count'] ?? 0;
 $badOptical = $data['bad_optical_count'] ?? 0;
 
+// OLT summary
+$oltConfig = require __DIR__ . '/config/olt.php';
+$oltCount = is_array($oltConfig) ? count($oltConfig) : 0;
+$ponCount = 0;
+$onuCount = 0;
+
+if (is_array($oltConfig)) {
+    foreach ($oltConfig as $oltId => $olt) {
+        $pons = $olt['pons'] ?? [];
+        $ponCount += count($pons);
+
+        foreach ($pons as $pon) {
+            $ponSafe = str_replace('/', '_', $pon);
+            $jsonFile = __DIR__ . "/storage/{$oltId}/pon_{$ponSafe}.json";
+            if (!file_exists($jsonFile)) {
+                continue;
+            }
+            $json = json_decode(file_get_contents($jsonFile), true);
+            if (is_array($json) && isset($json['total'])) {
+                $onuCount += (int) $json['total'];
+            }
+        }
+    }
+}
+
 require_once 'includes/layout_start.php';
 ?>
 
@@ -45,6 +70,21 @@ require_once 'includes/layout_start.php';
     <div class="card <?= $badOptical ? 'danger' : '' ?>">
         <h3><i class="fas fa-triangle-exclamation"></i> Optical Critical</h3>
         <p><strong><?= $badOptical ?></strong> port bermasalah</p>
+    </div>
+
+    <div class="card">
+        <h3><i class="fas fa-layer-group"></i> Total OLT</h3>
+        <p><strong><?= $oltCount ?></strong> olt terdaftar</p>
+    </div>
+
+    <div class="card">
+        <h3><i class="fas fa-network-wired"></i> Total PON</h3>
+        <p><strong><?= $ponCount ?></strong> pon aktif</p>
+    </div>
+
+    <div class="card">
+        <h3><i class="fas fa-user-friends"></i> Total ONU</h3>
+        <p><strong><?= $onuCount ?></strong> onu terdaftar</p>
     </div>
 
 </div>

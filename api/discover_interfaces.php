@@ -29,6 +29,110 @@ if (!$conn) {
     exit;
 }
 
+/* ========= SETTINGS (TELEGRAM) ========= */
+$telegram = [
+    'bot_token' => '',
+    'chat_id' => '',
+    'rx_threshold' => -25.0
+];
+
+$settingsRes = $conn->query("
+    SELECT name, value
+    FROM settings
+    WHERE name IN ('bot_token', 'chat_id', 'rx_power_threshold')
+");
+if ($settingsRes) {
+    while ($row = $settingsRes->fetch_assoc()) {
+        if ($row['name'] === 'bot_token') {
+            $telegram['bot_token'] = trim((string) $row['value']);
+        } elseif ($row['name'] === 'chat_id') {
+            $telegram['chat_id'] = trim((string) $row['value']);
+        } elseif ($row['name'] === 'rx_power_threshold') {
+            $telegram['rx_threshold'] = (float) $row['value'];
+        }
+    }
+}
+
+/* ========= ALERT HELPERS ========= */
+$alertStateFile = __DIR__ . '/../storage/alert_state.json';
+
+if (!function_exists('load_alert_state')) {
+    function load_alert_state(string $path): array
+    {
+        if (!file_exists($path)) {
+            return [];
+        }
+        $fp = fopen($path, 'r');
+        if (!$fp) {
+            return [];
+        }
+        flock($fp, LOCK_SH);
+        $raw = stream_get_contents($fp);
+        flock($fp, LOCK_UN);
+        fclose($fp);
+
+        $data = json_decode($raw, true);
+        return is_array($data) ? $data : [];
+    }
+}
+
+if (!function_exists('save_alert_state')) {
+    function save_alert_state(string $path, array $state): void
+    {
+        $fp = fopen($path, 'c+');
+        if (!$fp) {
+            return;
+        }
+        flock($fp, LOCK_EX);
+        ftruncate($fp, 0);
+        rewind($fp);
+        fwrite($fp, json_encode($state));
+        fflush($fp);
+        flock($fp, LOCK_UN);
+        fclose($fp);
+    }
+}
+
+if (!function_exists('telegram_send_message')) {
+    function telegram_send_message(string $botToken, string $chatId, string $text): bool
+    {
+        if ($botToken === '' || $chatId === '' || $text === '') {
+            return false;
+        }
+
+        $url = "https://api.telegram.org/bot{$botToken}/sendMessage";
+        $payload = http_build_query([
+            'chat_id' => $chatId,
+            'text' => $text,
+            'disable_web_page_preview' => 1
+        ]);
+
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            $result = curl_exec($ch);
+            $ok = ($result !== false);
+            curl_close($ch);
+            return $ok;
+        }
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
+                'content' => $payload,
+                'timeout' => 10
+            ]
+        ]);
+        $result = @file_get_contents($url, false, $context);
+        return ($result !== false);
+    }
+}
+
 /* ========= INPUT ========= */
 $device_id = (int) ($_GET['device_id'] ?? 0);
 if (!$device_id) {
@@ -138,6 +242,8 @@ ON DUPLICATE KEY UPDATE
 $inserted = 0;
 $sfpCount = 0;
 $downSfpCount = 0;
+$alertState = $isCli ? load_alert_state($alertStateFile) : [];
+$alertStateDirty = false;
 
 /* =========================================================
  *  LOOP INTERFACES - PERUBAHAN UTAMA: PROSES SEMUA, TIDAK HANYA UP
@@ -218,6 +324,36 @@ foreach ($ifIndex as $i => $raw) {
         }
     }
 
+    /* ===== TELEGRAM ALERTS (CLI ONLY) ===== */
+    if ($isCli && $isSfp) {
+        $deviceLabel = trim(($device['device_name'] ?? '') . ' (' . $ip . ')');
+        $ifaceLabel = $alias !== '' ? $alias : $name;
+        $timeLabel = date('Y-m-d H:i:s');
+
+        $stateKey = $device_id . ':' . $ifIdx;
+        $prevState = $alertState[$stateKey] ?? null;
+        $prevOper = is_array($prevState) ? (int)($prevState['oper'] ?? 0) : 0;
+        $prevHadOptic = is_array($prevState) ? (bool)($prevState['had_optic'] ?? false) : false;
+
+        $hasOpticUp = ($oper == 1) && ($rx !== null || $tx !== null);
+
+        // Update state first (so we always have current snapshot)
+        $alertState[$stateKey] = [
+            'oper' => (int)$oper,
+            'had_optic' => ($hasOpticUp || $prevHadOptic)
+        ];
+        $alertStateDirty = true;
+
+        // Alert hanya saat transisi up <-> down, dan hanya jika pernah up dengan optic
+        if ($prevOper === 1 && $oper != 1 && ($prevHadOptic || $hasOpticUp)) {
+            $msg = "🔴 LINK DOWN\n📟 Device: {$deviceLabel}\n🔌 Interface: {$ifaceLabel}\n🕒 Time: {$timeLabel}";
+            telegram_send_message($telegram['bot_token'], $telegram['chat_id'], $msg);
+        } elseif ($prevOper !== 1 && $oper == 1 && ($prevHadOptic || $hasOpticUp)) {
+            $msg = "🟢 LINK UP\n📟 Device: {$deviceLabel}\n🔌 Interface: {$ifaceLabel}\n📡 RX: " . ($rx !== null ? "{$rx} dBm" : "N/A") . "\n🕒 Time: {$timeLabel}";
+            telegram_send_message($telegram['bot_token'], $telegram['chat_id'], $msg);
+        }
+    }
+
     /* ===== INSERT / UPDATE INTERFACES ===== */
     $stmt->bind_param(
         'iisssiddiis',
@@ -280,6 +416,10 @@ foreach ($ifIndex as $i => $raw) {
         
         $stmtUpd->execute();
     }
+}
+
+if ($isCli && $alertStateDirty) {
+    save_alert_state($alertStateFile, $alertState);
 }
 
 /* =========================================================

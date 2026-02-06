@@ -372,6 +372,30 @@ function initAutoRefresh() {
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
+    // Live clock in header
+    const clockEls = document.querySelectorAll('[data-live-clock]');
+    if (clockEls.length) {
+        const updateClock = () => {
+            const now = new Date();
+            const time = now.toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            const date = now.toLocaleDateString('id-ID', {
+                weekday: 'short',
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+            clockEls.forEach(el => {
+                el.textContent = `${date} • ${time}`;
+            });
+        };
+        updateClock();
+        setInterval(updateClock, 1000);
+    }
+
     // Initialize auto-refresh
     initAutoRefresh();
     

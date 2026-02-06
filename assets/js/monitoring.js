@@ -1,6 +1,7 @@
 let chart = null;
 let currentRange = '1h';
 let autoRefreshTimer = null;
+let autoRefreshPaused = false;
 
 const deviceSelect = document.getElementById('deviceSelect');
 const interfaceSelect = document.getElementById('interfaceSelect');
@@ -104,6 +105,22 @@ interfaceSelect.addEventListener('change', () => {
 
     loadChart();
     startAutoRefresh();
+});
+
+// Pause polling when tab is hidden (reduce load)
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        if (autoRefreshTimer) {
+            autoRefreshPaused = true;
+            stopAutoRefresh();
+        }
+        return;
+    }
+
+    if (autoRefreshPaused && interfaceSelect.value) {
+        autoRefreshPaused = false;
+        startAutoRefresh();
+    }
 });
 
 /* ======================================================
