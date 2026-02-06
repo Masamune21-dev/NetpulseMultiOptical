@@ -24,7 +24,6 @@ Dirancang khusus untuk kebutuhan ISP / NOC.
 ![Settings](assets/img/screencapture-vid-masamune-my-id-settings-php-2026-02-06-09_29_46.png)
 
 # ✨ Features
-# ✨ Features
 
 ## 🔦 Optical Monitoring
 
