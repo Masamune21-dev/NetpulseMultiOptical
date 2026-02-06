@@ -98,12 +98,12 @@ function renderUsersTable(users) {
             <td><span class="badge ${statusClass}">${statusText}</span></td>
             <td class="actions-cell">
                 <div class="action-buttons">
-                    <button class="btn btn-sm action-edit" onclick='editUser(${JSON.stringify(u)})'>
-                        Edit
+                    <button class="btn btn-icon btn-edit action-edit" onclick='editUser(${JSON.stringify(u)})'>
+                        <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-sm btn-danger action-delete" 
+                    <button class="btn btn-icon btn-danger action-delete" 
                         onclick="deleteUser(${u.id}, '${escapeHtml(u.username)}')">
-                        Delete
+                        <i class="fas fa-trash"></i>
                     </button>
                 </div>
             </td>

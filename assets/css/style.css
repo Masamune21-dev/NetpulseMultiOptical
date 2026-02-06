@@ -589,6 +589,19 @@ body[data-role="viewer"] .action-delete {
     border-bottom-right-radius: var(--radius-lg);
 }
 
+/* Users table alignment + compact status badge */
+#userTable th:nth-child(4),
+#userTable td:nth-child(4),
+#userTable th:nth-child(5),
+#userTable td:nth-child(5) {
+    text-align: center;
+}
+
+#userTable td:nth-child(5) .badge {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.75rem;
+}
+
 /* BUTTONS */
 .btn {
     display: inline-flex;
