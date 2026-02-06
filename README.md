@@ -246,24 +246,6 @@ Runtime OLT data stored in:
 storage/olt-x/pon_x_x.json
 ```
 
-# 🔐 Security Notes
-
-Sensitive files are ignored:
-```bash
-config/database.php
-config/olt.php
-huawei_telnet_expect.sh
-storage/*
-cron/*.log
-```
-
-Use provided examples:
-
-- database.example.php
-- olt.example.php
-- huawei_telnet_expect.example.sh
-- Never commit credentials.
-
 # 🧠 Architecture Overview
 
 ```bash
