@@ -231,16 +231,48 @@ function loadChart() {
             let rxData = rx;
 
             if (data.length > 100) {
-                const step = Math.ceil(data.length / 100);
+                const step = Math.ceil(data.length / 120);
                 labels = [];
                 rxData = [];
 
                 for (let i = 0; i < data.length; i += step) {
-                    labels.push(
-                        new Date(data[i].created_at.replace(' ', 'T'))
-                    );
-                    let value = Number(data[i].rx_power);
-                    rxData.push(isNaN(value) ? -40 : value);
+                    const chunk = data.slice(i, i + step);
+                    if (!chunk.length) continue;
+
+                    let min = null, max = null;
+                    let minT = null, maxT = null;
+
+                    chunk.forEach(row => {
+                        const v = isNaN(Number(row.rx_power)) ? -40 : Number(row.rx_power);
+                        const t = new Date(row.created_at.replace(' ', 'T'));
+                        if (min === null || v < min) { min = v; minT = t; }
+                        if (max === null || v > max) { max = v; maxT = t; }
+                    });
+
+                    const points = [];
+                    if (minT && maxT) {
+                        if (minT <= maxT) {
+                            points.push([minT, min], [maxT, max]);
+                        } else {
+                            points.push([maxT, max], [minT, min]);
+                        }
+                    } else if (minT) {
+                        points.push([minT, min]);
+                    }
+
+                    points.forEach(([t, v]) => {
+                        labels.push(t);
+                        rxData.push(v);
+                    });
+                }
+
+                // Pastikan titik terakhir selalu ikut
+                const lastIdx = data.length - 1;
+                const lastLabel = new Date(data[lastIdx].created_at.replace(' ', 'T'));
+                if (!labels.length || labels[labels.length - 1].getTime() !== lastLabel.getTime()) {
+                    labels.push(lastLabel);
+                    const lastValue = Number(data[lastIdx].rx_power);
+                    rxData.push(isNaN(lastValue) ? -40 : lastValue);
                 }
             }
 

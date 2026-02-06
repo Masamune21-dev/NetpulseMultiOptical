@@ -379,23 +379,6 @@ function initAutoRefresh() {
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
-    // AOS init + auto-apply
-    if (window.AOS) {
-        const aosTargets = document.querySelectorAll(
-            '.topbar, .tabs, .cards .card, .table-responsive, .card:not(.modal-box)'
-        );
-        aosTargets.forEach(el => {
-            if (!el.hasAttribute('data-aos')) {
-                el.setAttribute('data-aos', 'fade-up');
-            }
-        });
-        AOS.init({
-            duration: 600,
-            offset: 80,
-            once: true
-        });
-    }
-
     // Live clock in header
     const clockEls = document.querySelectorAll('[data-live-clock]');
     if (clockEls.length) {

@@ -130,6 +130,15 @@ async function loadMapData() {
         const response = await fetch('api/map_nodes.php');
         nodes = await response.json();
 
+        if (nodes.length) {
+            const allLocked = nodes.every(n => String(n.is_locked) === '1');
+            const allUnlocked = nodes.every(n => String(n.is_locked) === '0');
+            mapLocked = allLocked ? true : (allUnlocked ? false : mapLocked);
+            try {
+                localStorage.setItem('mapLocked', mapLocked ? '1' : '0');
+            } catch (e) {}
+        }
+
         // Clear existing markers
         nodeMarkers.forEach(marker => map.removeLayer(marker));
         nodeMarkers = [];
