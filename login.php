@@ -685,8 +685,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
 
             <div class="login-footer">
-                <p>Need help? <a href="mailto:support@netpulse.com">Contact support</a></p>
-                <p>© <?= date('Y') ?> NetPulse MultiOptical. All rights reserved.</p>
+                <p>Need help? <a href="mailto:masamunekazuto21@gmeail.com">Contact support</a></p>
+                <p>© <?= date('Y') ?> NetpulseMultiOptical. Web ini dibuat oleh Masamune.</p>
             </div>
         </div>
     </div>

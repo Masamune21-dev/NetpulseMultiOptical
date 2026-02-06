@@ -275,6 +275,14 @@ body[data-role="viewer"] .action-delete {
     margin-left: 280px;
 }
 
+.app-footer {
+    padding: 1.25rem 2rem 2rem;
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    text-align: center;
+    margin-left: 280px;
+}
+
 /* TOPBAR */
 .topbar {
     position: relative;
@@ -1262,6 +1270,12 @@ body[data-role="viewer"] .action-delete {
         right: 12px;
         left: 12px;
         max-width: none;
+    }
+
+    .app-footer {
+        margin-left: 0;
+        padding: 1rem 1rem 6.5rem;
+        font-size: 0.8rem;
     }
 
     .card {
