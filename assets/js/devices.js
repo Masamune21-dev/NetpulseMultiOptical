@@ -104,12 +104,13 @@ function saveDevice() {
 
 function deleteDevice(id) {
     if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
-    if (!confirm('Delete device?')) return;
-    fetch('api/devices.php?id=' + id, { method: 'DELETE' })
-        .then(() => {
-            loadDevices();
-            loadMonitoringDevices();
-        });
+    confirmDelete('Hapus device ini?', () => {
+        fetch('api/devices.php?id=' + id, { method: 'DELETE' })
+            .then(() => {
+                loadDevices();
+                loadMonitoringDevices();
+            });
+    });
 }
 
 // ===============================

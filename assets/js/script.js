@@ -379,6 +379,23 @@ function initAutoRefresh() {
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
+    // AOS init + auto-apply
+    if (window.AOS) {
+        const aosTargets = document.querySelectorAll(
+            '.topbar, .tabs, .cards .card, .table-responsive, .card:not(.modal-box)'
+        );
+        aosTargets.forEach(el => {
+            if (!el.hasAttribute('data-aos')) {
+                el.setAttribute('data-aos', 'fade-up');
+            }
+        });
+        AOS.init({
+            duration: 600,
+            offset: 80,
+            once: true
+        });
+    }
+
     // Live clock in header
     const clockEls = document.querySelectorAll('[data-live-clock]');
     if (clockEls.length) {
@@ -438,6 +455,47 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof Chart !== 'undefined') {
         Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
         Chart.defaults.color = '#666';
+    }
+});
+
+// Delete confirmation modal
+let deleteConfirmCallback = null;
+
+window.confirmDelete = function (message, onConfirm) {
+    const modal = document.getElementById('confirmDeleteModal');
+    const msg = document.getElementById('confirmDeleteMessage');
+    const yesBtn = document.getElementById('confirmDeleteYes');
+    if (!modal || !msg || !yesBtn) {
+        if (confirm(message || 'Yakin ingin menghapus data ini?')) {
+            onConfirm && onConfirm();
+        }
+        return;
+    }
+
+    msg.textContent = message || 'Yakin ingin menghapus data ini?';
+    deleteConfirmCallback = onConfirm || null;
+    modal.style.display = 'flex';
+
+    const clickHandler = () => {
+        closeDeleteModal();
+        if (deleteConfirmCallback) {
+            deleteConfirmCallback();
+        }
+    };
+
+    yesBtn.onclick = clickHandler;
+};
+
+window.closeDeleteModal = function () {
+    const modal = document.getElementById('confirmDeleteModal');
+    if (modal) modal.style.display = 'none';
+    deleteConfirmCallback = null;
+};
+
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('confirmDeleteModal');
+    if (modal && modal.style.display === 'flex' && e.target === modal) {
+        closeDeleteModal();
     }
 });
 

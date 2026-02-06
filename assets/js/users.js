@@ -268,35 +268,34 @@ function saveUser() {
 // ===============================
 function deleteUser(id, username) {
     if (!requireAdmin()) return;
-    if (!confirm(`Are you sure you want to delete user "${username}"?\n\nThis action cannot be undone.`)) {
-        return;
-    }
+    confirmDelete(`Hapus user "${username}"?`, () => {
 
-    // Get the button that was clicked
-    const deleteBtn = event.target;
-    const originalText = deleteBtn.textContent;
-    deleteBtn.textContent = 'Deleting...';
-    deleteBtn.disabled = true;
+        // Get the button that was clicked
+        const deleteBtn = event.target;
+        const originalText = deleteBtn.textContent;
+        deleteBtn.textContent = 'Deleting...';
+        deleteBtn.disabled = true;
 
-    fetch(`api/users.php?id=${id}`, { 
-        method: 'DELETE' 
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showAlert('success', data.message || 'User deleted successfully');
-            loadUsers();
-        } else {
-            showAlert('error', data.error || 'Error deleting user');
-        }
-    })
-    .catch(error => {
-        console.error('Error deleting user:', error);
-        showAlert('error', 'Error deleting user: ' + error.message);
-    })
-    .finally(() => {
-        deleteBtn.textContent = originalText;
-        deleteBtn.disabled = false;
+        fetch(`api/users.php?id=${id}`, { 
+            method: 'DELETE' 
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message || 'User deleted successfully');
+                loadUsers();
+            } else {
+                showAlert('error', data.error || 'Error deleting user');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting user:', error);
+            showAlert('error', 'Error deleting user: ' + error.message);
+        })
+        .finally(() => {
+            deleteBtn.textContent = originalText;
+            deleteBtn.disabled = false;
+        });
     });
 }
 

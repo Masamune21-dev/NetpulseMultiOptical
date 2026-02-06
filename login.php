@@ -55,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - NetPulse MultiOptical</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
     <style>
         * {
             margin: 0;
@@ -588,7 +589,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <body>
     <!-- LEFT PANEL -->
-    <div class="login-left">
+    <div class="login-left" data-aos="fade-right">
         <div class="floating-shape shape-1"></div>
         <div class="floating-shape shape-2"></div>
 
@@ -632,9 +633,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <!-- RIGHT PANEL -->
-    <div class="login-right">
-        <div class="login-container">
-            <div class="login-header">
+    <div class="login-right" data-aos="fade-left">
+        <div class="login-container" data-aos="fade-up">
+            <div class="login-header" data-aos="fade-up">
                 <h2>Welcome Back</h2>
                 <p>Sign in to access your dashboard</p>
             </div>
@@ -691,7 +692,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
     <script>
+        if (window.AOS) {
+            AOS.init({ duration: 600, offset: 80, once: true });
+        }
         // Password toggle function
         function togglePassword() {
             const passwordInput = document.getElementById('password');

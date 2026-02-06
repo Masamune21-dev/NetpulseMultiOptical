@@ -516,56 +516,54 @@ async function updateNode() {
 // Delete node
 async function deleteNode() {
     if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
-    if (!confirm('Are you sure you want to delete this node?')) return;
+    confirmDelete('Hapus node ini?', async () => {
+        const nodeId = document.getElementById('editNodeId').value;
 
-    const nodeId = document.getElementById('editNodeId').value;
+        try {
+            const response = await fetch(`api/map_nodes.php?id=${nodeId}`, {
+                method: 'DELETE'
+            });
 
-    try {
-        const response = await fetch(`api/map_nodes.php?id=${nodeId}`, {
-            method: 'DELETE'
-        });
+            const result = await response.json();
 
-        const result = await response.json();
+            if (result.success) {
+                closeEditModal();
+                loadMapData();
+                showNotification('Node deleted successfully', 'success');
+            } else {
+                showNotification('Failed to delete node: ' + result.error, 'error');
+            }
 
-        if (result.success) {
-            closeEditModal();
-            loadMapData();
-            showNotification('Node deleted successfully', 'success');
-        } else {
-            showNotification('Failed to delete node: ' + result.error, 'error');
+        } catch (error) {
+            console.error('Error deleting node:', error);
+            showNotification('Failed to delete node', 'error');
         }
-
-    } catch (error) {
-        console.error('Error deleting node:', error);
-        showNotification('Failed to delete node', 'error');
-    }
+    });
 }
 
 async function deleteNodeQuick(id) {
     if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
+    confirmDelete('Hapus node ini?', async () => {
+        try {
+            const response = await fetch(`api/map_nodes.php?id=${id}`, {
+                method: 'DELETE'
+            });
 
-    if (!confirm('Delete this node?')) return;
+            const result = await response.json();
 
-    try {
+            if (result.success) {
+                closeNodeSidebar();
+                loadMapData();
+                showNotification('Node deleted', 'success');
+            } else {
+                showNotification(result.error || 'Delete failed', 'error');
+            }
 
-        const response = await fetch(`api/map_nodes.php?id=${id}`, {
-            method: 'DELETE'
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            closeNodeSidebar();
-            loadMapData();
-            showNotification('Node deleted', 'success');
-        } else {
-            showNotification(result.error || 'Delete failed', 'error');
+        } catch (e) {
+            console.error(e);
+            showNotification('Delete failed', 'error');
         }
-
-    } catch (e) {
-        console.error(e);
-        showNotification('Delete failed', 'error');
-    }
+    });
 }
 
 // Update node position after drag
