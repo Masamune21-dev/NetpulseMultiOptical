@@ -273,14 +273,22 @@ body[data-role="viewer"] .action-delete {
     padding: 2rem;
     max-width: calc(100vw - 280px);
     margin-left: 280px;
+    padding-bottom: 4rem;
 }
 
 .app-footer {
-    padding: 1.25rem 2rem 2rem;
+    padding: 0.5rem 1.5rem;
     color: var(--text-soft);
     font-size: 0.85rem;
     text-align: center;
-    margin-left: 280px;
+    position: fixed;
+    left: 280px;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    background: var(--surface);
+    border-top: var(--glass-border);
+    z-index: 150;
 }
 
 /* TOPBAR */
@@ -1055,6 +1063,10 @@ body[data-role="viewer"] .action-delete {
     .content {
         max-width: calc(100vw - 240px);
     }
+
+    .app-footer {
+        left: 240px;
+    }
 }
 
 @media (max-width: 992px) {
@@ -1066,6 +1078,10 @@ body[data-role="viewer"] .action-delete {
     .content {
         max-width: calc(100vw - 200px);
         padding: 1.5rem;
+    }
+
+    .app-footer {
+        left: 200px;
     }
 
     .cards {
@@ -1193,7 +1209,7 @@ body[data-role="viewer"] .action-delete {
         max-width: 100%;
         padding: 1rem;
         padding-top: 5.5rem;
-        padding-bottom: 6rem;
+        padding-bottom: 7rem;
         margin-left: 0;
     }
 
@@ -1273,9 +1289,12 @@ body[data-role="viewer"] .action-delete {
     }
 
     .app-footer {
-        margin-left: 0;
-        padding: 1rem 1rem 6.5rem;
+        position: static;
+        left: auto;
+        right: auto;
+        padding: 0.75rem 1rem 5.5rem;
         font-size: 0.8rem;
+        margin-top: 0.75rem;
     }
 
     .card {
