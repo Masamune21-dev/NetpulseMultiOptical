@@ -160,6 +160,11 @@ Import schema:
 mysql -u root -p netpulse < database/schema.sql
 ```
 
+## 🔑 Default Login
+
+- Username: `admin`
+- Password: `admin123`
+
 ## 7️⃣ Web Server Setup
 
 Apache example:

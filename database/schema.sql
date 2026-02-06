@@ -113,13 +113,13 @@ CREATE TABLE `interface_stats` (
   `id` int NOT NULL AUTO_INCREMENT,
   `device_id` int NOT NULL,
   `if_index` int NOT NULL,
-  `tx_power` float DEFAULT NULL,
-  `rx_power` float DEFAULT NULL,
+  `tx_power` decimal(6,2) DEFAULT NULL,
+  `rx_power` decimal(6,2) DEFAULT NULL,
   `loss` float DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `device_id` (`device_id`,`if_index`,`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=251845 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=587194 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -146,6 +146,7 @@ CREATE TABLE `interfaces` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `rx_power` decimal(10,3) DEFAULT NULL,
+  `oper_status` tinyint DEFAULT '1',
   `tx_power` decimal(10,3) DEFAULT NULL,
   `temperature` decimal(5,2) DEFAULT NULL,
   `voltage` decimal(6,3) DEFAULT NULL,
@@ -155,7 +156,7 @@ CREATE TABLE `interfaces` (
   KEY `idx_device` (`device_id`),
   KEY `idx_sfp` (`is_sfp`),
   CONSTRAINT `fk_interfaces_snmp_devices` FOREIGN KEY (`device_id`) REFERENCES `snmp_devices` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=540238 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=936224 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -312,6 +313,12 @@ DELIMITER ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
+-- Default admin user
+--
+INSERT INTO `users` (`username`, `full_name`, `password`, `role`, `is_active`)
+VALUES ('admin', 'Administrator', '$2y$10$25YLCwk4jSrdkxfejR2Q8ux1s1auDdwBbIS9OTYMGubZaF5kPE3Zy', 'admin', 1);
+
+--
 -- Table structure for table `users_backup`
 --
 
@@ -332,6 +339,14 @@ CREATE TABLE `users_backup` (
   `password` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping events for database 'mikrotik_monitor'
+--
+
+--
+-- Dumping routines for database 'mikrotik_monitor'
+--
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -342,4 +357,4 @@ CREATE TABLE `users_backup` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-05 15:53:19
+-- Dump completed on 2026-02-06 19:44:56
