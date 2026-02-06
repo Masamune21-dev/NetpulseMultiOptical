@@ -9,15 +9,13 @@ if (($_SESSION['role'] ?? '') !== 'admin') {
 ?>
 
 <div class="topbar">
-    <h1>
-        <i class="fas fa-users"></i>
-        User Management
-    </h1>
-
-    <button class="btn" onclick="openAddModal()">
-        <i class="fas fa-user-plus"></i>
-        Add User
-    </button>
+    <div class="topbar-content">
+        <h1>Users</h1>
+        <button class="btn" onclick="openAddModal()">
+            <i class="fas fa-user-plus"></i>
+            Add User
+        </button>
+    </div>
 </div>
 
 <div class="table-responsive">
