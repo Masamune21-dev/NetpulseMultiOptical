@@ -2,7 +2,7 @@
 require_once '../includes/auth.php';
 $auth = new Auth();
 
-if (!$auth->is_logged_in() || ($_SESSION['role'] ?? '') !== 'admin') {
+if (!$auth->is_logged_in()) {
     http_response_code(403);
     exit;
 }
@@ -10,6 +10,10 @@ if (!$auth->is_logged_in() || ($_SESSION['role'] ?? '') !== 'admin') {
 $conn = get_db_connection();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician'])) {
+        http_response_code(403);
+        exit;
+    }
     $res = $conn->query("SELECT name,value FROM settings");
     $data = [];
     while ($r = $res->fetch_assoc()) {
@@ -20,6 +24,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 $data = json_decode(file_get_contents('php://input'), true);
+
+if (($_SESSION['role'] ?? '') !== 'admin') {
+    http_response_code(403);
+    exit;
+}
 
 foreach ($data as $k => $v) {
     $stmt = $conn->prepare(

@@ -36,7 +36,7 @@ $current = basename($_SERVER['PHP_SELF']);
     <script src="assets/js/theme.js"></script>
 </head>
 
-<body>
+<body data-role="<?= htmlspecialchars($user['role'] ?? 'viewer') ?>">
     <div class="layout">
         <header class="mobile-header">
             <div class="mobile-brand">

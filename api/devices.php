@@ -111,6 +111,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['test'])) {
 $data = json_decode(file_get_contents('php://input'), true);
 
 if ($method === 'POST') {
+    if (!$auth->has_role('admin')) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Forbidden']);
+        exit;
+    }
 
     if (empty($data['id'])) {
         $stmt = $conn->prepare(
@@ -151,6 +156,11 @@ if ($method === 'POST') {
 }
 
 if ($method === 'DELETE') {
+    if (!$auth->has_role('admin')) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Forbidden']);
+        exit;
+    }
     $id = (int)($_GET['id'] ?? 0);
     $conn->query("DELETE FROM snmp_devices WHERE id=$id");
     echo json_encode(['success'=>true]);

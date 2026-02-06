@@ -37,13 +37,13 @@ function loadDevices() {
                     <td>${d.last_status ?? '-'}</td>
                     <td class="actions-cell">
                         <div class="action-buttons">
-                            <button class="btn btn-icon btn-edit" onclick='editDevice(${JSON.stringify(d)})'>
+                            <button class="btn btn-icon btn-edit action-edit" onclick='editDevice(${JSON.stringify(d)})'>
                             <i class="fas fa-edit"></i>
                             </button>
                             <button class="btn btn-icon btn-info" onclick="testSNMP(${d.id})">
                             <i class="fas fa-plug"></i>
                             </button>
-                            <button class="btn btn-icon btn-danger" onclick="deleteDevice(${d.id})">
+                            <button class="btn btn-icon btn-danger action-delete" onclick="deleteDevice(${d.id})">
                             <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -58,6 +58,7 @@ function loadDevices() {
 // MODAL
 // ===============================
 function openAddDevice() {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
     document.getElementById('deviceModal').style.display = 'flex';
 }
 
@@ -66,6 +67,7 @@ function closeModal() {
 }
 
 function editDevice(d) {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
     openAddDevice();
     device_id.value = d.id;
     device_name.value = d.device_name;
@@ -80,6 +82,7 @@ function editDevice(d) {
 // CRUD
 // ===============================
 function saveDevice() {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
     fetch('api/devices.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -100,6 +103,7 @@ function saveDevice() {
 }
 
 function deleteDevice(id) {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
     if (!confirm('Delete device?')) return;
     fetch('api/devices.php?id=' + id, { method: 'DELETE' })
         .then(() => {

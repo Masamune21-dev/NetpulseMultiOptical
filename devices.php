@@ -1,7 +1,7 @@
 <?php
 require_once 'includes/layout_start.php';
 /* Pastikan hanya admin */
-if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician'])) {
+if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
     echo '<div class="alert error">Access denied</div>';
     require_once 'includes/layout_end.php';
     exit;
@@ -11,7 +11,7 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician'])) {
 <div class="topbar">
     <div class="topbar-content">
         <h1>Data Devices</h1>
-        <button class="btn" onclick="openAddDevice()">
+        <button class="btn action-create" onclick="openAddDevice()">
             <i class="fas fa-plus"></i> Add Device
         </button>
     </div>

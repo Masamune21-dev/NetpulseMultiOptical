@@ -2,7 +2,7 @@
 require_once 'includes/layout_start.php';
 
 /* Pastikan hanya admin/technician */
-if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician'])) {
+if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
     echo '<div class="alert error">Access denied</div>';
     require_once 'includes/layout_end.php';
     exit;
@@ -13,10 +13,10 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician'])) {
     <div class="topbar-content">
         <h1><i class="fas fa-map-marked-alt"></i> Network Map</h1>
         <div class="topbar-actions">
-            <button class="btn btn-outline" onclick="toggleLock()" id="lockBtn">
+            <button class="btn btn-outline" id="lockBtn">
                 <i class="fas fa-lock-open"></i> Unlocked
             </button>
-            <button class="btn" onclick="openAddNodeModal()">
+            <button class="btn action-create" onclick="openAddNodeModal()">
                 <i class="fas fa-plus"></i> Add Node
             </button>
             <button class="btn btn-primary" onclick="refreshMap()">
@@ -332,12 +332,11 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician'])) {
     /* Node Sidebar */
     .node-sidebar {
         position: fixed;
-        right: -400px;
+        right: -460px;
         top: 80px;
-        width: 380px;
+        width: 460px;
         height: calc(100vh - 100px);
         background: rgba(255, 255, 255, 0.98);
-        backdrop-filter: blur(20px);
         border-left: 1px solid rgba(0, 0, 0, 0.1);
         box-shadow: -5px 0 30px rgba(0, 0, 0, 0.1);
         z-index: 1001;
@@ -385,7 +384,153 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician'])) {
     }
 
     .sidebar-content {
-        padding: 25px;
+        padding: 28px;
+    }
+
+    .node-info {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .node-header {
+        display: grid;
+        grid-template-columns: 52px 1fr auto;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .node-icon-large {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .node-icon-large.router {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .node-icon-large.switch {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .node-icon-large.firewall {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .node-icon-large.ap {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .node-icon-large.server {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+
+    .node-icon-large.client {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+
+    .node-icon-large.cloud {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    }
+
+    .node-title h4 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+    }
+
+    .node-subtitle {
+        margin: 2px 0 0;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .node-details {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .detail-item {
+        background: rgba(0, 0, 0, 0.03);
+        border-radius: 12px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .detail-item label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .detail-item span {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        word-break: break-word;
+    }
+
+    .node-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .interfaces-section h4 {
+        margin: 0 0 10px;
+        font-size: 1rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .interfaces-section .table-responsive {
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.02);
+        border-radius: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .interfaces-section .table {
+        margin: 0;
+    }
+
+    .interfaces-section .table {
+        font-size: 0.85rem;
+    }
+
+    .interfaces-section code {
+        background: rgba(99, 102, 241, 0.1);
+        padding: 2px 6px;
+        border-radius: 6px;
+        color: #4f46e5;
+    }
+
+    @media (max-width: 1200px) {
+        .node-sidebar {
+            width: 420px;
+            right: -420px;
+        }
     }
 
     .sidebar-placeholder {
@@ -535,6 +680,15 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician'])) {
         opacity: 1;
     }
 
+    .node-marker.show-label .node-label {
+        opacity: 1;
+    }
+
+    .node-marker.highlighted .node-icon {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.35), 0 10px 24px rgba(99, 102, 241, 0.35);
+    }
+
     /* Connection Lines */
     .connection-line {
         stroke: rgba(100, 116, 139, 0.4);
@@ -575,6 +729,19 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician'])) {
         .node-sidebar {
             width: 100%;
             right: -100%;
+        }
+
+        .node-header {
+            grid-template-columns: 44px 1fr;
+        }
+
+        .node-header .badge {
+            grid-column: 1 / -1;
+            justify-self: flex-start;
+        }
+
+        .detail-grid {
+            grid-template-columns: 1fr;
         }
     }
 </style>

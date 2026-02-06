@@ -52,6 +52,12 @@ function initMap() {
     map.setView([-6.748973663434672, 110.97523378333311], 10);
 
     map.whenReady(() => {
+        try {
+            const savedLock = localStorage.getItem('mapLocked');
+            if (savedLock === '1') {
+                mapLocked = true;
+            }
+        } catch (e) {}
         loadMapData();
         loadAvailableDevices();
     });
@@ -133,6 +139,8 @@ async function loadMapData() {
             createNodeMarker(node);
         });
 
+        applyLockState(false);
+
         // Update device filter
         updateDeviceFilter();
 
@@ -206,6 +214,12 @@ function selectNode(node) {
     selectedNode = node;
     showNodeSidebar(node);
     highlightNode(node.id);
+    const markerEl = document.querySelector(`.node-marker[data-node-id="${node.id}"]`);
+    if (markerEl) markerEl.classList.add('show-label');
+    const marker = nodeMarkers.find(m => m.nodeData && m.nodeData.id === node.id);
+    if (marker && marker.getTooltip()) {
+        marker.openTooltip();
+    }
 }
 
 // Show node details in sidebar
@@ -229,27 +243,17 @@ function showNodeSidebar(node) {
                         <thead>
                             <tr>
                                 <th>Interface</th>
-                                <th>Type</th>
                                 <th>RX Power</th>
-                                <th>Loss</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${node.interfaces.map(iface => `
                                 <tr>
                                     <td><code>${iface.if_name}</code></td>
-                                    <td><span class="badge">${iface.interface_type || 'SFP'}</span></td>
                                     <td>
                                         ${iface.rx_power !== null && !isNaN(parseFloat(iface.rx_power)) ? `
                                             <span class="power-value ${getPowerClass(parseFloat(iface.rx_power))}">
                                                 ${parseFloat(iface.rx_power).toFixed(2)} dBm
-                                            </span>
-                                        ` : '-'}
-                                    </td>
-                                    <td>
-                                        ${iface.tx_power && iface.rx_power ? `
-                                            <span class="loss-value">
-                                                ${(iface.tx_power - iface.rx_power).toFixed(2)} dB
                                             </span>
                                         ` : '-'}
                                     </td>
@@ -310,10 +314,10 @@ function showNodeSidebar(node) {
                         <button class="btn btn-sm btn-outline" onclick="discoverNodeInterfaces(${node.device_id})">
                             <i class="fas fa-search"></i> Discover Interfaces
                         </button>
-                        <button class="btn btn-sm btn-primary" onclick="editNode(${node.id})">
+                        <button class="btn btn-sm btn-primary action-edit" onclick="editNode(${node.id})">
                             <i class="fas fa-edit"></i> Edit Node
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteNodeQuick(${node.id})">
+                        <button class="btn btn-sm btn-danger action-delete" onclick="deleteNodeQuick(${node.id})">
                             <i class="fas fa-trash-alt"></i> Delete Node
                         </button>
                     </div>
@@ -332,6 +336,12 @@ function closeNodeSidebar() {
     document.getElementById('nodeSidebar').classList.remove('open');
     selectedNode = null;
     unhighlightAllNodes();
+    document.querySelectorAll('.node-marker.show-label').forEach(el => el.classList.remove('show-label'));
+    nodeMarkers.forEach(m => {
+        if (m.getTooltip && m.getTooltip()) {
+            m.closeTooltip();
+        }
+    });
 }
 
 // Highlight selected node
@@ -376,6 +386,7 @@ async function loadAvailableDevices() {
 
 // Add new node
 async function addNode() {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
     const deviceId = document.getElementById('nodeDeviceSelect').value;
     const nodeName = document.getElementById('nodeName').value;
     const nodeType = document.getElementById('nodeType').value;
@@ -440,6 +451,7 @@ async function addNode() {
 
 // Edit node
 function editNode(nodeId) {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
     const node = nodes.find(n => n.id == nodeId);
     if (!node) {
         showNotification('Node not found', 'error');
@@ -460,6 +472,7 @@ function editNode(nodeId) {
 
 // Update node
 async function updateNode() {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
     const nodeId = document.getElementById('editNodeId').value;
     const nodeName = document.getElementById('editNodeName').value;
     const nodeType = document.getElementById('editNodeType').value;
@@ -502,6 +515,7 @@ async function updateNode() {
 
 // Delete node
 async function deleteNode() {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
     if (!confirm('Are you sure you want to delete this node?')) return;
 
     const nodeId = document.getElementById('editNodeId').value;
@@ -528,6 +542,7 @@ async function deleteNode() {
 }
 
 async function deleteNodeQuick(id) {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
 
     if (!confirm('Delete this node?')) return;
 
@@ -555,6 +570,7 @@ async function deleteNodeQuick(id) {
 
 // Update node position after drag
 async function updateNodePosition(nodeId, latLng) {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
 
     const node = nodes.find(n => n.id == nodeId);
     if (!node) return;
@@ -586,29 +602,70 @@ async function updateNodePosition(nodeId, latLng) {
 // Toggle map lock
 function toggleLock() {
     mapLocked = !mapLocked;
-    const lockBtn = document.getElementById('lockBtn');
+    try {
+        localStorage.setItem('mapLocked', mapLocked ? '1' : '0');
+    } catch (e) {}
+    setAllNodesLock(mapLocked);
 
-    if (mapLocked) {
-        lockBtn.innerHTML = '<i class="fas fa-lock"></i> Locked';
-        lockBtn.classList.remove('btn-outline');
-        showNotification('Map locked - nodes cannot be moved', 'info');
-    } else {
-        lockBtn.innerHTML = '<i class="fas fa-lock-open"></i> Unlocked';
-        lockBtn.classList.add('btn-outline');
-        showNotification('Map unlocked - nodes can be moved', 'info');
+}
+
+async function setAllNodesLock(lockState) {
+    try {
+        const response = await fetch('api/map_nodes.php', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                lock_all: true,
+                is_locked: lockState ? 1 : 0
+            })
+        });
+        const result = await response.json();
+        if (!result.success) {
+            showNotification(result.error || 'Failed to update lock state', 'error');
+        }
+    } catch (e) {
+        showNotification('Failed to update lock state', 'error');
+    }
+
+    nodes.forEach(n => {
+        n.is_locked = lockState ? 1 : 0;
+    });
+    nodeMarkers.forEach(marker => {
+        if (marker.nodeData) {
+            marker.nodeData.is_locked = lockState ? 1 : 0;
+        }
+    });
+
+    applyLockState(true);
+}
+
+function applyLockState(showToast = false) {
+    const lockBtn = document.getElementById('lockBtn');
+    if (lockBtn) {
+        if (mapLocked) {
+            lockBtn.innerHTML = '<i class="fas fa-lock"></i> Locked';
+            lockBtn.classList.remove('btn-outline');
+        } else {
+            lockBtn.innerHTML = '<i class="fas fa-lock-open"></i> Unlocked';
+            lockBtn.classList.add('btn-outline');
+        }
     }
 
     // Update draggable state of all markers
     nodeMarkers.forEach(marker => {
-
         if (mapLocked || marker.nodeData.is_locked == 1) {
             marker.dragging.disable();
         } else {
             marker.dragging.enable();
         }
-
     });
 
+    if (showToast) {
+        showNotification(
+            mapLocked ? 'Map locked - nodes cannot be moved' : 'Map unlocked - nodes can be moved',
+            'info'
+        );
+    }
 }
 
 // Refresh map data
@@ -727,6 +784,7 @@ function showNotification(message, type = 'info') {
 
 // Modal functions
 function openAddNodeModal() {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
     document.getElementById('addNodeModal').style.display = 'flex';
 }
 
@@ -744,6 +802,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('mapControlToggle').addEventListener('click', () => {
         document.querySelector('.map-controls').classList.toggle('open');
     });
+
+    const lockBtn = document.getElementById('lockBtn');
+    if (lockBtn) {
+        lockBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleLock();
+        });
+    }
 
     initMap();
 });

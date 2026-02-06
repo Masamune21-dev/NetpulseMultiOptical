@@ -22,6 +22,10 @@ $ifCount = $data['interface_count'] ?? 0;
 $sfpCount = $data['sfp_count'] ?? 0;
 $badOptical = $data['bad_optical_count'] ?? 0;
 
+$userResult = $conn->query("SELECT COUNT(*) as user_count FROM users");
+$userRow = $userResult ? $userResult->fetch_assoc() : null;
+$userCount = $userRow['user_count'] ?? 0;
+
 // OLT summary
 $oltConfig = require __DIR__ . '/config/olt.php';
 $oltCount = is_array($oltConfig) ? count($oltConfig) : 0;
@@ -85,6 +89,11 @@ require_once 'includes/layout_start.php';
     <div class="card">
         <h3><i class="fas fa-user-friends"></i> Total ONU</h3>
         <p><strong><?= $onuCount ?></strong> onu terdaftar</p>
+    </div>
+
+    <div class="card">
+        <h3><i class="fas fa-users"></i> Total Users</h3>
+        <p><strong><?= $userCount ?></strong> user terdaftar</p>
     </div>
 
 </div>

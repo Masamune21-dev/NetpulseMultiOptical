@@ -4,8 +4,7 @@ require_once '../config/database.php';
 
 $auth = new Auth();
 
-// Check if user is logged in and is admin
-if (!$auth->is_logged_in() || ($_SESSION['role'] ?? '') !== 'admin') {
+if (!$auth->is_logged_in()) {
     http_response_code(403);
     header('Content-Type: application/json');
     echo json_encode(['error' => 'Access denied']);
@@ -16,6 +15,12 @@ $conn = get_db_connection();
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
+    if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician'])) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Access denied']);
+        exit;
+    }
     // Get all users except the current user
     $current_user_id = $_SESSION['user_id'] ?? 0;
     $stmt = $conn->prepare(
@@ -41,6 +46,11 @@ if ($method === 'GET') {
 $data = json_decode(file_get_contents('php://input'), true);
 
 if ($method === 'POST') {
+    if (($_SESSION['role'] ?? '') !== 'admin') {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Access denied']);
+        exit;
+    }
     try {
         // Validate required fields
         if (empty($data['username']) || empty($data['full_name']) || empty($data['role'])) {
@@ -136,6 +146,11 @@ if ($method === 'POST') {
 }
 
 if ($method === 'DELETE') {
+    if (($_SESSION['role'] ?? '') !== 'admin') {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Access denied']);
+        exit;
+    }
     try {
         $id = (int)($_GET['id'] ?? 0);
         $current_user_id = $_SESSION['user_id'] ?? 0;

@@ -56,17 +56,15 @@ switch ($method) {
             // Get active interfaces if device exists
             if ($row['device_id']) {
                 $ifResult = $conn->query("
-                    SELECT if_name, if_alias, 
+                    SELECT if_name, if_alias, if_description, if_type, is_sfp, last_seen,
                            CAST(rx_power AS DECIMAL(10,2)) as rx_power,
-                           CAST(tx_power AS DECIMAL(10,2)) as tx_power,
                            interface_type
                     FROM interfaces 
                     WHERE device_id = {$row['device_id']} 
-                    AND is_sfp = 1 
-                    AND rx_power IS NOT NULL
-                    AND rx_power != ''
+                    AND is_monitored = 1
+                    AND oper_status = 1
                     ORDER BY if_index
-                    LIMIT 10
+                    LIMIT 200
                 ");
 
                 while ($ifRow = $ifResult->fetch_assoc()) {
@@ -86,6 +84,11 @@ switch ($method) {
         break;
 
     case 'POST':
+        if (!$auth->has_role('admin')) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Forbidden']);
+            exit;
+        }
         // Add new node
         $data = json_decode(file_get_contents('php://input'), true);
 
@@ -119,9 +122,25 @@ switch ($method) {
         break;
 
     case 'PUT':
+        if (!$auth->has_role('admin')) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Forbidden']);
+            exit;
+        }
         $data = json_decode(file_get_contents('php://input'), true);
 
         if (!$data || !isset($data['id'])) {
+            if (!empty($data['lock_all'])) {
+                $lockVal = (int) ($data['is_locked'] ?? 0);
+                $stmt = $conn->prepare("UPDATE map_nodes SET is_locked = ?");
+                $stmt->bind_param('i', $lockVal);
+                if ($stmt->execute()) {
+                    echo json_encode(['success' => true]);
+                } else {
+                    echo json_encode(['success' => false, 'error' => $stmt->error]);
+                }
+                exit;
+            }
             echo json_encode(['success' => false, 'error' => 'Invalid JSON']);
             exit;
         }
@@ -156,6 +175,11 @@ switch ($method) {
         break;
 
     case 'DELETE':
+        if (!$auth->has_role('admin')) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Forbidden']);
+            exit;
+        }
         // Delete node
         $nodeId = (int) ($_GET['id'] ?? 0);
 

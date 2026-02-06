@@ -33,6 +33,7 @@ function loadSettings() {
 }
 
 function saveTelegram() {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
     fetch('api/settings.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,6 +46,7 @@ function saveTelegram() {
 }
 
 function saveTheme() {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
     const theme = document.querySelector('input[name="theme"]:checked').value;
 
     document.body.dataset.theme = theme; // 🔥 langsung apply
@@ -60,6 +62,7 @@ function saveTheme() {
 
 
 function testTelegram() {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
     fetch('api/telegram_test.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }

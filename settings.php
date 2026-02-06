@@ -2,7 +2,7 @@
 require_once 'includes/layout_start.php';
 
 /* Pastikan hanya admin */
-if (($_SESSION['role'] ?? '') !== 'admin') {
+if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician'])) {
     echo '<div class="alert error">Access denied</div>';
     require_once 'includes/layout_end.php';
     exit;
@@ -45,10 +45,10 @@ if (($_SESSION['role'] ?? '') !== 'admin') {
         </div>
 
         <div class="modal-actions">
-            <button class="btn" onclick="saveTelegram()">
+            <button class="btn action-edit" onclick="saveTelegram()">
                 <i class="fas fa-save"></i> Save
             </button>
-            <button class="btn" style="background:#10b981" onclick="testTelegram()">
+            <button class="btn action-edit" style="background:#10b981" onclick="testTelegram()">
                 <i class="fas fa-paper-plane"></i> Test Bot
             </button>
         </div>
@@ -78,7 +78,7 @@ if (($_SESSION['role'] ?? '') !== 'admin') {
         </div>
 
         <div class="modal-actions">
-            <button class="btn" onclick="saveTheme()">
+            <button class="btn action-edit" onclick="saveTheme()">
                 <i class="fas fa-save"></i> Save Theme
             </button>
         </div>

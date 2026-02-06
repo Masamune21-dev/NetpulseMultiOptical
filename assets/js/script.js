@@ -462,3 +462,20 @@ window.mikrotikMonitor = {
 
 // Backward compatibility for direct calls
 window.showNotification = showNotification;
+
+// Role helpers
+window.roleUtils = {
+    getRole() {
+        return document.body?.dataset?.role || 'viewer';
+    },
+    isAdmin() {
+        return this.getRole() === 'admin';
+    },
+    requireAdmin(message = 'Akses ditolak') {
+        if (!this.isAdmin()) {
+            showNotification(message, 'warning');
+            return false;
+        }
+        return true;
+    }
+};

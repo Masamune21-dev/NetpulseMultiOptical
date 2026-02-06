@@ -6,6 +6,19 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners();
 });
 
+function requireAdmin() {
+    const role = document.body?.dataset?.role || 'viewer';
+    if (role !== 'admin') {
+        if (typeof showNotification === 'function') {
+            showNotification('Akses ditolak', 'warning');
+        } else {
+            showAlert('warning', 'Akses ditolak');
+        }
+        return false;
+    }
+    return true;
+}
+
 // ===============================
 // INITIALIZE EVENT LISTENERS
 // ===============================
@@ -85,10 +98,10 @@ function renderUsersTable(users) {
             <td><span class="badge ${statusClass}">${statusText}</span></td>
             <td class="actions-cell">
                 <div class="action-buttons">
-                    <button class="btn btn-sm" onclick='editUser(${JSON.stringify(u)})'>
+                    <button class="btn btn-sm action-edit" onclick='editUser(${JSON.stringify(u)})'>
                         Edit
                     </button>
-                    <button class="btn btn-sm btn-danger" 
+                    <button class="btn btn-sm btn-danger action-delete" 
                         onclick="deleteUser(${u.id}, '${escapeHtml(u.username)}')">
                         Delete
                     </button>
@@ -103,6 +116,7 @@ function renderUsersTable(users) {
 // MODAL FUNCTIONS
 // ===============================
 function openAddModal() {
+    if (!requireAdmin()) return;
     const modal = document.getElementById('userModal');
     const modalTitle = document.getElementById('modalTitle');
     
@@ -142,6 +156,7 @@ function openAddModal() {
 }
 
 function editUser(user) {
+    if (!requireAdmin()) return;
     const modal = document.getElementById('userModal');
     const modalTitle = document.getElementById('modalTitle');
     
@@ -182,6 +197,7 @@ function closeModal() {
 // SAVE USER
 // ===============================
 function saveUser() {
+    if (!requireAdmin()) return;
     const userId = document.getElementById('userId').value;
     const username = document.getElementById('username')?.value.trim();
     const fullName = document.getElementById('full_name')?.value.trim();
@@ -251,6 +267,7 @@ function saveUser() {
 // DELETE USER
 // ===============================
 function deleteUser(id, username) {
+    if (!requireAdmin()) return;
     if (!confirm(`Are you sure you want to delete user "${username}"?\n\nThis action cannot be undone.`)) {
         return;
     }
