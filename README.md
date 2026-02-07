@@ -193,7 +193,7 @@ crontab -e
 ```
 ## 🔹 Interface Polling (setiap 1 menit)
 ```bash
-* * * * * /usr/bin/php /var/www/NetpulseMultiOptical/cron/poll_interfaces.php >> /var/www/NetpulseMultiOptical/cron/cron.log 2>&1
+*/1 * * * * flock -n /tmp/poll_interfaces.lock /usr/bin/php /var/www/NetpulseMultiOptical/cron/poll_interfaces.php >> /var/www/NetpulseMultiOptical/cron/cron.log 2>&1
 ```
 ## 🔹 Huawei Optical Discovery (setiap 1 menit)
 ```bash
