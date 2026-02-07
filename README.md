@@ -23,7 +23,7 @@ Dirancang khusus untuk kebutuhan ISP / NOC.
 ![Network Map](assets/img/map.png)
 ![Olt](assets/img/olt.png)
 ![Settings](assets/img/seting-tema.png)
-![Settings](assets/img/seting-logs.png)
+![Settings](assets/img/setting-logs.png)
 # ✨ Features
 
 ## 🔦 Optical Monitoring
