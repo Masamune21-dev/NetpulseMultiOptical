@@ -119,7 +119,7 @@ CREATE TABLE `interface_stats` (
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `device_id` (`device_id`,`if_index`,`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=587194 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1054523 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -156,7 +156,7 @@ CREATE TABLE `interfaces` (
   KEY `idx_device` (`device_id`),
   KEY `idx_sfp` (`is_sfp`),
   CONSTRAINT `fk_interfaces_snmp_devices` FOREIGN KEY (`device_id`) REFERENCES `snmp_devices` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=936224 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1484162 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -181,6 +181,36 @@ CREATE TABLE `login_attempts` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `map_links`
+--
+
+DROP TABLE IF EXISTS `map_links`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `map_links` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `node_a_id` int NOT NULL,
+  `node_b_id` int NOT NULL,
+  `interface_a_id` int NOT NULL,
+  `interface_b_id` int NOT NULL,
+  `attenuation_db` decimal(6,2) DEFAULT NULL,
+  `notes` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `path_json` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_nodes` (`node_a_id`,`node_b_id`),
+  KEY `idx_interfaces` (`interface_a_id`,`interface_b_id`),
+  KEY `fk_map_links_node_b` (`node_b_id`),
+  KEY `fk_map_links_iface_b` (`interface_b_id`),
+  CONSTRAINT `fk_map_links_iface_a` FOREIGN KEY (`interface_a_id`) REFERENCES `interfaces` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_map_links_iface_b` FOREIGN KEY (`interface_b_id`) REFERENCES `interfaces` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_map_links_node_a` FOREIGN KEY (`node_a_id`) REFERENCES `map_nodes` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_map_links_node_b` FOREIGN KEY (`node_b_id`) REFERENCES `map_nodes` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `map_nodes`
 --
 
@@ -201,34 +231,7 @@ CREATE TABLE `map_nodes` (
   PRIMARY KEY (`id`),
   KEY `idx_device` (`device_id`),
   CONSTRAINT `map_nodes_ibfk_1` FOREIGN KEY (`device_id`) REFERENCES `snmp_devices` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `map_links`
---
-
-DROP TABLE IF EXISTS `map_links`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `map_links` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `node_a_id` int NOT NULL,
-  `node_b_id` int NOT NULL,
-  `interface_a_id` int NOT NULL,
-  `interface_b_id` int NOT NULL,
-  `attenuation_db` decimal(6,2) DEFAULT NULL,
-  `notes` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_nodes` (`node_a_id`,`node_b_id`),
-  KEY `idx_interfaces` (`interface_a_id`,`interface_b_id`),
-  CONSTRAINT `fk_map_links_node_a` FOREIGN KEY (`node_a_id`) REFERENCES `map_nodes` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_map_links_node_b` FOREIGN KEY (`node_b_id`) REFERENCES `map_nodes` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_map_links_iface_a` FOREIGN KEY (`interface_a_id`) REFERENCES `interfaces` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_map_links_iface_b` FOREIGN KEY (`interface_b_id`) REFERENCES `interfaces` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -296,7 +299,7 @@ CREATE TABLE `snmp_devices` (
   `map_locked` tinyint DEFAULT '0',
   `vendor` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -340,12 +343,6 @@ DELIMITER ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
--- Default admin user
---
-INSERT INTO `users` (`username`, `full_name`, `password`, `role`, `is_active`)
-VALUES ('admin', 'Administrator', '$2y$10$25YLCwk4jSrdkxfejR2Q8ux1s1auDdwBbIS9OTYMGubZaF5kPE3Zy', 'admin', 1);
-
---
 -- Table structure for table `users_backup`
 --
 
@@ -366,14 +363,6 @@ CREATE TABLE `users_backup` (
   `password` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping events for database 'mikrotik_monitor'
---
-
---
--- Dumping routines for database 'mikrotik_monitor'
---
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -384,4 +373,4 @@ CREATE TABLE `users_backup` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-06 19:44:56
+-- Dump completed on 2026-02-08  5:09:32

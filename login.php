@@ -1,7 +1,7 @@
 <?php
 require_once 'includes/auth.php';
+require_once 'config/security.php';
 
-// Redirect if already logged in
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     header('Location: dashboard.php');
     exit;
@@ -11,30 +11,34 @@ $auth = new Auth();
 $error = '';
 $success = '';
 
-// CSRF protection
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Validate CSRF token
+
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         $error = 'Invalid security token. Please try again.';
     } else {
-        // Validate input
+
         $username = isset($_POST['username']) ? trim($_POST['username']) : '';
         $password = isset($_POST['password']) ? $_POST['password'] : '';
 
         if (empty($username) || empty($password)) {
             $error = 'Please enter both username and password';
         } else {
+            $rateKey = 'login:' . ($username ?: 'unknown') . ':' . ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+            if (!rate_limit($rateKey, 5, 600)) {
+                log_security_event('LOGIN_RATE_LIMIT', "username={$username}");
+                $error = 'Too many attempts. Please wait and try again.';
+            } else {
             $result = $auth->login($username, $password);
 
             if ($result['success']) {
-                // Regenerate CSRF token after successful login
+                log_security_event('LOGIN_SUCCESS', "username={$username}");
+
                 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
-                // Check if there's a redirect URL
                 $redirect = $_SESSION['redirect_url'] ?? 'dashboard.php';
                 unset($_SESSION['redirect_url']);
 
@@ -42,6 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             } else {
                 $error = $result['message'];
+                log_security_event('LOGIN_FAILED', "username={$username}");
+            }
             }
         }
     }
@@ -61,6 +67,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (theme) {
                     document.documentElement.setAttribute('data-theme', theme);
                 }
+                var primary = localStorage.getItem('primary_color') || '#6366f1';
+                var soft = localStorage.getItem('primary_soft') || '#8b5cf6';
+                document.documentElement.style.setProperty('--primary', primary);
+                document.documentElement.style.setProperty('--primary-soft', soft);
+                document.documentElement.style.setProperty(
+                    '--primary-gradient',
+                    'linear-gradient(135deg, ' + primary + ' 0%, ' + soft + ' 100%)'
+                );
+                document.documentElement.style.setProperty(
+                    '--sidebar',
+                    'linear-gradient(160deg, ' + primary + ' 0%, ' + soft + ' 55%, ' + primary + ' 100%)'
+                );
             } catch (e) { }
         })();
     </script>
@@ -77,7 +95,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             overflow-x: hidden;
         }
 
-        /* ================= LEFT PANEL ================= */
         .login-left {
             background: var(--sidebar);
             color: white;
@@ -179,7 +196,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: rgba(255, 255, 255, 0.9);
         }
 
-        /* ================= RIGHT PANEL ================= */
         .login-right {
             background: var(--surface);
             display: flex;
@@ -220,7 +236,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 0.9rem;
         }
 
-        /* ================= ALERT ================= */
         .alert {
             padding: 1rem 1.25rem;
             border-radius: var(--radius-md);
@@ -262,7 +277,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 1.1rem;
         }
 
-        /* ================= FORM ================= */
         .form-group {
             margin-bottom: 1.8rem;
             position: relative;
@@ -284,7 +298,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: var(--primary);
         }
 
-        /* PERBAIKAN UTAMA: Placeholder styling */
         .login-page .form-control {
             width: 100%;
             padding: 0.9rem 1rem 0.9rem 3.6rem;
@@ -296,7 +309,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: var(--text);
         }
 
-        /* Placeholder untuk semua browser */
         .form-control::placeholder {
             color: var(--text-soft);
             opacity: 1;
@@ -338,7 +350,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: rgba(148, 163, 184, 0.6);
         }
 
-        /* PERBAIKAN: Input icon positioning */
         .input-icon {
             position: absolute;
             left: 1.1rem;
@@ -354,7 +365,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             pointer-events: none;
         }
 
-        /* Password field styling */
         .login-page .password-field {
             padding-right: 3.6rem !important;
         }
@@ -388,7 +398,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 16px;
         }
 
-        /* Hint text di bawah input */
         .form-hint {
             display: block;
             margin-top: 0.4rem;
@@ -397,7 +406,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-style: italic;
         }
 
-        /* ================= BUTTON ================= */
         .btn-login {
             width: 100%;
             padding: 1rem;
@@ -438,7 +446,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 1.2rem;
         }
 
-        /* ================= FOOTER ================= */
         .login-footer {
             margin-top: 2.5rem;
             padding-top: 1.5rem;
@@ -461,7 +468,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             text-decoration: underline;
         }
 
-        /* ================= RESPONSIVE ================= */
         @media (max-width: 1024px) {
             body.login-page {
                 grid-template-columns: 1fr;
@@ -510,7 +516,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        /* ================= ANIMATIONS ================= */
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -527,7 +532,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             animation: fadeIn 0.6s ease-out;
         }
 
-        /* ================= DECORATIVE ELEMENTS ================= */
         .floating-shape {
             position: absolute;
             border-radius: 50%;
@@ -551,7 +555,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             left: -30px;
         }
 
-        /* ================= CUSTOM SCROLLBAR ================= */
         ::-webkit-scrollbar {
             width: 8px;
         }
@@ -568,17 +571,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ::-webkit-scrollbar-thumb:hover {
             background: #a8a8a8;
         }
+
         @media (max-width: 640px) {
             body.login-page {
                 grid-template-columns: 1fr;
             }
 
-            /* sembunyikan panel kiri */
             .login-left {
                 display: none;
             }
 
-            /* panel kanan full screen */
             .login-right {
                 display: flex;
                 min-height: 100vh;
@@ -586,7 +588,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 box-shadow: none;
             }
 
-            /* login card lebih nyaman di HP */
             .login-container {
                 max-width: 100%;
                 padding: 1.5rem;
@@ -600,7 +601,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 padding: 1rem;
             }
         }
-
     </style>
 </head>
 
@@ -718,7 +718,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script>
-        // Password toggle function
         function togglePassword() {
             const passwordInput = document.getElementById('password');
             const toggleIcon = document.querySelector('.password-toggle i');
@@ -733,26 +732,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 passwordInput.removeAttribute('data-visible');
             }
 
-            // Return focus to password field
             passwordInput.focus();
         }
 
-        // Form submission handler
         document.getElementById('loginForm').addEventListener('submit', function (e) {
             const button = document.getElementById('loginButton');
             const buttonText = document.getElementById('buttonText');
             const buttonIcon = document.getElementById('buttonIcon').querySelector('i');
 
-            // Disable button and show loading
             button.disabled = true;
             buttonText.textContent = 'Signing in...';
             buttonIcon.className = 'fas fa-spinner fa-spin';
 
-            // Add loading class to form
             this.classList.add('form-loading');
         });
 
-        // Auto-focus username field on page load
         document.addEventListener('DOMContentLoaded', function () {
             const usernameField = document.getElementById('username');
             if (usernameField) {
@@ -761,14 +755,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }, 300);
             }
 
-            // Add keyboard shortcut hints
             document.addEventListener('keydown', function (e) {
-                // Ctrl + / focuses username
                 if (e.ctrlKey && e.key === '/') {
                     e.preventDefault();
                     document.getElementById('username').focus();
                 }
-                // Ctrl + . focuses password
                 if (e.ctrlKey && e.key === '.') {
                     e.preventDefault();
                     document.getElementById('password').focus();
@@ -776,7 +767,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         });
 
-        // Press Enter to submit (but not in textarea)
         document.addEventListener('keypress', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 const focused = document.activeElement;
@@ -789,7 +779,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
 
-        // Clear error message when user starts typing
         document.getElementById('username').addEventListener('input', function () {
             const errorAlert = document.querySelector('.alert-error');
             if (errorAlert) {
@@ -806,7 +795,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
 
-        // Show password on Ctrl+Shift+P
         document.addEventListener('keydown', function (e) {
             if (e.ctrlKey && e.shiftKey && e.key === 'P') {
                 e.preventDefault();

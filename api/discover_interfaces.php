@@ -160,6 +160,10 @@ $ifAlias = @snmp2_walk($ip, $community, '1.3.6.1.2.1.31.1.1.1.18');
 $ifOper = @snmp2_walk($ip, $community, '1.3.6.1.2.1.2.2.1.8');
 
 if (!$ifIndex || !$ifName) {
+    if ($isCli) {
+        echo "SKIP device ID: {$device_id} (IF-MIB unreachable)\n";
+        return;
+    }
     echo json_encode(['success' => false, 'error' => 'Cannot read IF-MIB']);
     exit;
 }
@@ -331,29 +335,46 @@ foreach ($ifIndex as $i => $raw) {
     /* ===== TELEGRAM ALERTS (CLI ONLY) ===== */
     if ($isCli && $isSfp) {
         $deviceLabel = trim(($device['device_name'] ?? '') . ' (' . $ip . ')');
-        $ifaceLabel = $alias !== '' ? $alias : $name;
+        $ifaceComment = $alias !== '' ? $alias : (($desc ?? '') !== '' ? $desc : '');
+        $ifaceLabel = $ifaceComment !== '' ? "{$name} ({$ifaceComment})" : $name;
         $timeLabel = date('Y-m-d H:i:s');
 
         $stateKey = $device_id . ':' . $ifIdx;
         $prevState = $alertState[$stateKey] ?? null;
-        $prevOper = is_array($prevState) ? (int)($prevState['oper'] ?? 0) : 0;
+        $prevKnown = is_array($prevState);
+        $prevLinkUp = is_array($prevState) ? (bool)($prevState['link_up'] ?? false) : false;
+        $prevWarn = is_array($prevState) ? (bool)($prevState['warn'] ?? false) : false;
         $prevHadOptic = is_array($prevState) ? (bool)($prevState['had_optic'] ?? false) : false;
 
         $hasOpticUp = ($oper == 1) && ($rx !== null || $tx !== null);
 
+        // Down condition: oper down OR rx null / -40 (no optic)
+        $isDownByRx = ($rx === null || (is_numeric($rx) && (float)$rx <= -40.0));
+        $linkUp = ($oper == 1) && !$isDownByRx;
+
+        // Warning: rx <= -18 (but not down/ -40)
+        $warnNow = (is_numeric($rx) && (float)$rx <= -18.0 && (float)$rx > -40.0);
+
         // Update state first (so we always have current snapshot)
         $alertState[$stateKey] = [
-            'oper' => (int)$oper,
+            'link_up' => $linkUp,
+            'warn' => $warnNow,
             'had_optic' => ($hasOpticUp || $prevHadOptic)
         ];
         $alertStateDirty = true;
 
         // Alert hanya saat transisi up <-> down, dan hanya jika pernah up dengan optic
-        if ($prevOper === 1 && $oper != 1 && ($prevHadOptic || $hasOpticUp)) {
+        if ($prevKnown && $prevLinkUp && !$linkUp && ($prevHadOptic || $hasOpticUp)) {
             $msg = "🔴 LINK DOWN\n📟 Device: {$deviceLabel}\n🔌 Interface: {$ifaceLabel}\n🕒 Time: {$timeLabel}";
             telegram_send_message($telegram['bot_token'], $telegram['chat_id'], $msg);
-        } elseif ($prevOper !== 1 && $oper == 1 && ($prevHadOptic || $hasOpticUp)) {
+        } elseif ($prevKnown && !$prevLinkUp && $linkUp && ($prevHadOptic || $hasOpticUp)) {
             $msg = "🟢 LINK UP\n📟 Device: {$deviceLabel}\n🔌 Interface: {$ifaceLabel}\n📡 RX: " . ($rx !== null ? "{$rx} dBm" : "N/A") . "\n🕒 Time: {$timeLabel}";
+            telegram_send_message($telegram['bot_token'], $telegram['chat_id'], $msg);
+        }
+
+        // Warning once when threshold crossed
+        if ($prevKnown && $warnNow && !$prevWarn) {
+            $msg = "🟡 RX WARNING\n📟 Device: {$deviceLabel}\n🔌 Interface: {$ifaceLabel}\n📡 RX: " . ($rx !== null ? "{$rx} dBm" : "N/A") . "\n🕒 Time: {$timeLabel}";
             telegram_send_message($telegram['bot_token'], $telegram['chat_id'], $msg);
         }
     }

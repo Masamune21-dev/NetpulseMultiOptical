@@ -53,16 +53,17 @@ switch ($method) {
             $row['status'] = $row['last_status'] ?? 'unknown';
             $row['interfaces'] = [];
 
-            // Get active interfaces if device exists
-            if ($row['device_id']) {
+            // Get interfaces only when device is online
+            $isOnline = ($row['status'] === 'OK' || $row['status'] === 'Up' || $row['status'] === 'online');
+            if ($row['device_id'] && $isOnline) {
                 $ifResult = $conn->query("
                     SELECT if_name, if_alias, if_description, if_type, is_sfp, last_seen,
                            CAST(rx_power AS DECIMAL(10,2)) as rx_power,
-                           interface_type
+                           interface_type,
+                           oper_status
                     FROM interfaces 
                     WHERE device_id = {$row['device_id']} 
                     AND is_monitored = 1
-                    AND oper_status = 1
                     ORDER BY if_index
                     LIMIT 200
                 ");

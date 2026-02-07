@@ -26,11 +26,11 @@ function telnetConnect(array $cfg)
     stream_set_blocking($fp, false);
 
     telnetRead($fp);
-    telnetWrite($fp, $cfg['username']);
+    if (!telnetWrite($fp, $cfg['username'])) throw new Exception("Telnet write failed");
     telnetRead($fp);
-    telnetWrite($fp, $cfg['password']);
+    if (!telnetWrite($fp, $cfg['password'])) throw new Exception("Telnet write failed");
     telnetRead($fp);
-    telnetWrite($fp, 'enable');
+    if (!telnetWrite($fp, 'enable')) throw new Exception("Telnet write failed");
     telnetRead($fp);
 
     return $fp;
@@ -54,13 +54,22 @@ function telnetRead($fp, $timeout = 2)
 
 function telnetWrite($fp, $cmd)
 {
-    fwrite($fp, $cmd . "\r\n");
+    if (!is_resource($fp) || feof($fp)) {
+        return false;
+    }
+    $bytes = @fwrite($fp, $cmd . "\r\n");
+    if ($bytes === false) {
+        return false;
+    }
     usleep(300000);
+    return true;
 }
 
 function telnetCmd($fp, $cmd)
 {
-    telnetWrite($fp, $cmd);
+    if (!telnetWrite($fp, $cmd)) {
+        return '';
+    }
 
     $buf = '';
     $start = microtime(true);
@@ -194,6 +203,12 @@ function collectAllPon(array $olt)
     foreach ($olt['pons'] as $pon) {
         $listRaw = telnetCmd($fp, "show onu info epon {$pon} all");
         $onus = parseOnuList($listRaw);
+        if (empty($onus) && !empty($olt['debug_dir'])) {
+            $safe = str_replace('/', '_', $pon);
+            $dbgFile = rtrim($olt['debug_dir'], '/') . "/debug_pon_{$safe}.txt";
+            $payload = "[RAW OUTPUT]\n" . $listRaw . "\n";
+            @file_put_contents($dbgFile, $payload);
+        }
 
         foreach ($onus as &$onu) {
             if ($onu['status'] !== 'Up') {

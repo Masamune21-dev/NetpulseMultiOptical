@@ -24,7 +24,20 @@ $current = basename($_SERVER['PHP_SELF']);
                 var theme = localStorage.getItem('theme');
                 if (theme) {
                     document.documentElement.setAttribute('data-theme', theme);
+                    document.body && document.body.setAttribute('data-theme', theme);
                 }
+                var primary = localStorage.getItem('primary_color') || '#6366f1';
+                var soft = localStorage.getItem('primary_soft') || '#8b5cf6';
+                document.documentElement.style.setProperty('--primary', primary);
+                document.documentElement.style.setProperty('--primary-soft', soft);
+                document.documentElement.style.setProperty(
+                    '--primary-gradient',
+                    'linear-gradient(135deg, ' + primary + ' 0%, ' + soft + ' 100%)'
+                );
+                document.documentElement.style.setProperty(
+                    '--sidebar',
+                    'linear-gradient(160deg, ' + primary + ' 0%, ' + soft + ' 55%, ' + primary + ' 100%)'
+                );
             } catch (e) { }
         })();
     </script>
@@ -37,6 +50,14 @@ $current = basename($_SERVER['PHP_SELF']);
 </head>
 
 <body data-role="<?= htmlspecialchars($user['role'] ?? 'viewer') ?>">
+    <script>
+        (function () {
+            try {
+                var theme = document.documentElement.getAttribute('data-theme');
+                if (theme) document.body.setAttribute('data-theme', theme);
+            } catch (e) { }
+        })();
+    </script>
     <div class="layout">
         <header class="mobile-header">
             <div class="mobile-brand">

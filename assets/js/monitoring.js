@@ -144,7 +144,7 @@ function initChart() {
             labels: [],
             datasets: [{
                 data: [],
-                borderColor: '#b53fec',
+                borderColor: '#6366f1',
                 backgroundColor: 'rgba(255,255,255,0.06)',
                 borderWidth: 2,
                 tension: 0.25,
@@ -307,15 +307,20 @@ function loadChart() {
                 ).format(d);
             };
 
+            const primaryColor = getComputedStyle(document.documentElement)
+                .getPropertyValue('--primary')
+                .trim() || '#6366f1';
+
             chart.data.labels = labels;
             chart.data.datasets[0].data = rxData;
+            chart.data.datasets[0].borderColor = primaryColor;
 
             // Update chart warna untuk nilai -40 (interface down)
             chart.data.datasets[0].segment = {
                 borderColor: ctx => {
                     return ctx.p1.parsed.y === -40 ?
                         'rgba(255, 99, 132, 0.5)' : // Merah untuk interface down
-                        '#b53fec'; // Ungu normal
+                        primaryColor; // Primary normal
                 }
             };
 

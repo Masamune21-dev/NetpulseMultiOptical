@@ -1,7 +1,6 @@
 <?php
 require_once 'includes/layout_start.php';
 
-/* Pastikan hanya admin/technician */
 if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
     echo '<div class="alert error">Access denied</div>';
     require_once 'includes/layout_end.php';
@@ -93,16 +92,12 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         <div class="control-group">
             <div class="control-title">Map Layers</div>
             <div class="control-item">
-                <input type="checkbox" id="showGrid" checked>
+                <input type="checkbox" id="showGrid">
                 <label for="showGrid">Show Grid</label>
             </div>
             <div class="control-item">
                 <input type="checkbox" id="showConnections" checked>
                 <label for="showConnections">Connections</label>
-            </div>
-            <div class="control-item">
-                <input type="checkbox" id="autoArrange" onclick="toggleAutoArrange()">
-                <label for="autoArrange">Auto Arrange</label>
             </div>
         </div>
 
@@ -267,12 +262,11 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <style>
-    /* Map Container Styles */
     .map-container {
         position: relative;
-        height: calc(100vh - 300px);
+        height: calc(100vh - 350px);
         width: 100%;
-        min-height: 600px;
+        min-height: 500px;
         background: var(--bg-secondary);
     }
 
@@ -282,7 +276,6 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         z-index: 1;
     }
 
-    /* Map Controls */
     .map-controls {
         position: absolute;
         top: 15px;
@@ -304,7 +297,10 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         transition: .25s ease;
     }
 
-    /* aktif */
+    .leaflet-top.leaflet-right {
+        top: 70px;
+    }
+
     .map-controls.open {
         opacity: 1;
         pointer-events: auto;
@@ -339,6 +335,24 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
 
     .map-control-btn:hover {
         transform: scale(1.1);
+    }
+
+    .leaflet-control-fullscreen {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #6366f1;
+    }
+
+    .leaflet-control-fullscreen:hover {
+        transform: scale(1.06);
     }
 
     .control-group {
@@ -388,7 +402,6 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         font-size: 14px;
     }
 
-    /* Node Sidebar */
     .node-sidebar {
         position: fixed;
         right: -460px;
@@ -585,6 +598,12 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         margin-bottom: 0;
     }
 
+    .connection-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
     .connection-item small {
         color: var(--text-secondary);
     }
@@ -609,6 +628,33 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         color: #4f46e5;
     }
 
+    .iface-name.power-good {
+        color: var(--success);
+        background: rgba(16, 185, 129, 0.1);
+    }
+
+    .iface-name.power-warning {
+        color: var(--warning);
+        background: rgba(245, 158, 11, 0.12);
+    }
+
+    .iface-name.power-critical {
+        color: var(--danger);
+        background: rgba(239, 68, 68, 0.12);
+    }
+
+    .power-value.power-good {
+        color: var(--success);
+    }
+
+    .power-value.power-warning {
+        color: var(--warning);
+    }
+
+    .power-value.power-critical {
+        color: var(--danger);
+    }
+
     @media (max-width: 1200px) {
         .node-sidebar {
             width: 420px;
@@ -628,7 +674,6 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         opacity: 0.5;
     }
 
-    /* Node Styles */
     .node-marker {
         position: absolute;
         transform: translate(-50%, -50%);
@@ -760,7 +805,6 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.35), 0 10px 24px rgba(99, 102, 241, 0.35);
     }
 
-    /* Connection Lines */
     .connection-line {
         stroke-width: 3;
         stroke-dasharray: 6 6;
@@ -773,8 +817,6 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         }
     }
 
-
-    /* Grid Layer */
     .grid-layer {
         position: absolute;
         top: 0;
@@ -789,7 +831,6 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         background-size: 50px 50px;
     }
 
-    /* Responsive */
     @media (max-width: 768px) {
         .map-controls {
             width: 250px;
@@ -818,9 +859,7 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
     }
 </style>
 
-<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- Custom Map JS -->
 <script src="assets/js/map.js"></script>
 
 <?php

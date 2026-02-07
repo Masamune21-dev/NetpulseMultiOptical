@@ -98,10 +98,14 @@ function validate_session() {
         return false;
     }
     
-    // Check session timeout (8 hours)
-    if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 28800)) {
+    // Check session timeout (7 days)
+    if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 604800)) {
         session_destroy();
         return false;
+    }
+
+    if (isset($_SESSION['login_time'])) {
+        $_SESSION['login_time'] = time();
     }
     
     // Verify session fingerprint

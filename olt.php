@@ -3,11 +3,9 @@ require_once 'includes/layout_start.php';
 
 $olts = require __DIR__ . '/config/olt.php';
 
-/* default */
 $oltId = $_GET['olt'] ?? array_key_first($olts);
 $pon = $_GET['pon'] ?? $olts[$oltId]['pons'][0];
 
-/* safety */
 if (!isset($olts[$oltId])) {
     $oltId = array_key_first($olts);
 }
@@ -30,83 +28,75 @@ if (file_exists($jsonFile)) {
 }
 ?>
 <style>
-/* ===============================
-   SIMPLE DROPDOWN SELECT
-================================ */
-.topbar form {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.topbar label {
-    font-size: 14px;
-    font-weight: 600;
-    color: #444;
-}
-
-/* SELECT STYLING */
-.topbar select {
-    min-width: 160px;
-    padding: 8px 32px 8px 12px;
-    
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    background: white;
-    color: #333;
-    font-size: 14px;
-    
-    cursor: pointer;
-    transition: all 0.2s;
-    
-
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    background-size: 14px;
-}
-
-/* Hover effect */
-.topbar select:hover {
-    border-color: #888;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
-}
-
-/* Focus effect */
-.topbar select:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-/* Active option */
-.topbar select option:checked {
-    background: #007bff;
-    color: white;
-}
-
-/* RESPONSIVE */
-@media (max-width: 768px) {
     .topbar form {
-        width: 100%;
-        gap: 6px;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        display: flex;
         align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
     }
 
     .topbar label {
-        font-size: 12px;
-        margin-bottom: 2px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #444;
     }
-    
+
     .topbar select {
-        min-width: 0;
-        width: 100%;
-        font-size: 13px;
-        padding: 6px 28px 6px 10px;
+        min-width: 160px;
+        padding: 8px 32px 8px 12px;
+
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: white;
+        color: #333;
+        font-size: 14px;
+
+        cursor: pointer;
+        transition: all 0.2s;
+
+
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 14px;
     }
-}
+
+    .topbar select:hover {
+        border-color: #888;
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+    }
+
+    .topbar select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+
+    .topbar select option:checked {
+        background: #007bff;
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .topbar form {
+            width: 100%;
+            gap: 6px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            align-items: center;
+        }
+
+        .topbar label {
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+
+        .topbar select {
+            min-width: 0;
+            width: 100%;
+            font-size: 13px;
+            padding: 6px 28px 6px 10px;
+        }
+    }
 </style>
 <div class="topbar">
     <h1>
@@ -199,7 +189,7 @@ if (file_exists($jsonFile)) {
                 <?php endforeach; ?>
             <?php else: ?>
                 <tr>
-                    <td colspan="9" align="center"> <!-- 9 kolom sekarang -->
+                    <td colspan="9" align="center">
                         Data ONU belum tersedia
                     </td>
                 </tr>

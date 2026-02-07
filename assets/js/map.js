@@ -22,13 +22,13 @@ let editHandleLayer = null;
 
 // Icon definitions
 const nodeIcons = {
-    router: { icon: 'fa-router', color: '#6366f1' },
-    switch: { icon: 'fa-server', color: '#6366f1' },
-    firewall: { icon: 'fa-shield-alt', color: '#6366f1' },
-    ap: { icon: 'fa-wifi', color: '#6366f1' },
-    server: { icon: 'fa-server', color: '#6366f1' },
-    client: { icon: 'fa-desktop', color: '#6366f1' },
-    cloud: { icon: 'fa-cloud', color: '#6366f1' }
+    router: { icon: 'fa-router', colorVar: '--primary' },
+    switch: { icon: 'fa-server', colorVar: '--primary' },
+    firewall: { icon: 'fa-shield-alt', colorVar: '--primary' },
+    ap: { icon: 'fa-wifi', colorVar: '--primary' },
+    server: { icon: 'fa-server', colorVar: '--primary' },
+    client: { icon: 'fa-desktop', colorVar: '--primary' },
+    cloud: { icon: 'fa-cloud', colorVar: '--primary' }
 };
 
 // Initialize Map
@@ -39,10 +39,78 @@ function initMap() {
         maxZoom: 20
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 20,
         attribution: '&copy; OpenStreetMap'
-    }).addTo(map);
+    });
+
+    const satelliteLayer = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri'
+        }
+    );
+
+    const lightLayer = L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        {
+            maxZoom: 20,
+            attribution: '&copy; CARTO'
+        }
+    );
+
+    const darkLayer = L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        {
+            maxZoom: 20,
+            attribution: '&copy; CARTO'
+        }
+    );
+
+    streetLayer.addTo(map);
+
+    const baseMaps = {
+        'Street': streetLayer,
+        'Satellite': satelliteLayer,
+        'Light': lightLayer,
+        'Dark': darkLayer
+    };
+    L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+    const fullscreenControl = L.control({ position: 'topleft' });
+    fullscreenControl.onAdd = function () {
+        const btn = L.DomUtil.create('button', 'leaflet-control-fullscreen');
+        btn.type = 'button';
+        btn.title = 'Fullscreen';
+        btn.innerHTML = '<i class="fas fa-expand"></i>';
+
+        L.DomEvent.on(btn, 'click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+            const mapEl = document.getElementById('networkMap');
+            if (!document.fullscreenElement) {
+                if (mapEl && mapEl.requestFullscreen) {
+                    mapEl.requestFullscreen();
+                }
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        return btn;
+    };
+    fullscreenControl.addTo(map);
+
+    document.addEventListener('fullscreenchange', () => {
+        const btn = document.querySelector('.leaflet-control-fullscreen');
+        if (!btn) return;
+        if (document.fullscreenElement) {
+            btn.innerHTML = '<i class="fas fa-compress"></i>';
+        } else {
+            btn.innerHTML = '<i class="fas fa-expand"></i>';
+        }
+    });
 
     map.on('click', function (e) {
         if (lineEditMode) {
@@ -187,7 +255,7 @@ function createNodeMarker(node) {
     const markerHtml = `
         <div class="node-marker" data-node-id="${node.id}">
             <div class="node-icon ${node.node_type}" 
-                 style="background: ${icon.color}">
+                 style="background: var(${icon.colorVar || '--primary'})">
                 <i class="fas ${icon.icon}"></i>
                 <div class="node-status ${node.status === 'OK' ? 'up' : 'down'}"></div>
             </div>
@@ -430,9 +498,17 @@ function renderConnections() {
         if (!map.hasLayer(fromMarker) || !map.hasLayer(toMarker)) return;
         const weight = 3;
         const actualAtt = computeLinkAttenuation(connection);
+        const rxA = Number(connection.rxA);
+        const rxB = Number(connection.rxB);
         let color = 'rgba(16, 185, 129, 0.85)';
-        if (Number.isFinite(actualAtt) && actualAtt <= -40) {
+
+        // If any end is down (-40), force red
+        if ((Number.isFinite(rxA) && rxA <= -40) || (Number.isFinite(rxB) && rxB <= -40)) {
             color = 'rgba(239, 68, 68, 0.85)';
+        } else if (Number.isFinite(actualAtt) && actualAtt <= -18 && actualAtt >= -25) {
+            color = 'rgba(245, 158, 11, 0.9)'; // yellow
+        } else if (Number.isFinite(actualAtt) && actualAtt < -25 && actualAtt >= -40) {
+            color = 'rgba(239, 68, 68, 0.85)'; // red
         }
 
         const line = L.polyline(latlngs, {
@@ -503,7 +579,14 @@ function showNodeSidebar(node) {
                         <tbody>
                             ${node.interfaces.map(iface => `
                                 <tr>
-                                    <td><code>${iface.if_name}</code></td>
+                                    <td>
+                                        <code class="iface-name ${getPowerClass(parseFloat(iface.rx_power))}">${iface.if_name}</code>
+                                        ${iface.if_alias || iface.if_description ? `
+                                            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">
+                                                ${iface.if_alias || iface.if_description}
+                                            </div>
+                                        ` : ''}
+                                    </td>
                                     <td>
                                         ${iface.rx_power !== null && !isNaN(parseFloat(iface.rx_power)) ? `
                                             <span class="power-value ${getPowerClass(parseFloat(iface.rx_power))}">
@@ -1007,9 +1090,14 @@ function updateConnectionList() {
                 <div><strong>${link.node_b_name}</strong> (${link.interface_b_name})</div>
                 ${link.attenuation_db !== null ? `<small>Att: ${parseFloat(link.attenuation_db).toFixed(2)} dB</small>` : ''}
             </div>
-            <button class="btn btn-sm btn-danger" type="button" data-delete-connection="${link.id}">
-                <i class="fas fa-trash"></i>
-            </button>
+            <div class="connection-actions">
+                <button class="btn btn-sm btn-outline" type="button" data-reset-connection="${link.id}">
+                    <i class="fas fa-undo"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" type="button" data-delete-connection="${link.id}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
         </div>
     `).join('');
 }
@@ -1034,7 +1122,9 @@ async function populateInterfaceSelect(nodeId, selectId) {
         const response = await fetch(`api/interfaces.php?device_id=${node.device_id}`);
         const ifaces = await response.json();
         ifaces.forEach(iface => {
-            const label = iface.if_name || iface.if_alias || `if-${iface.if_index}`;
+            const name = iface.if_name || `if-${iface.if_index}`;
+            const alias = iface.if_alias || '';
+            const label = alias ? `${name} (${alias})` : name;
             const rx = iface.rx_power !== null && iface.rx_power !== undefined ? iface.rx_power : '';
             const tx = iface.tx_power !== null && iface.tx_power !== undefined ? iface.tx_power : '';
             select.innerHTML += `<option value="${iface.id}" data-rx="${rx}" data-tx="${tx}">${label}</option>`;
@@ -1161,6 +1251,31 @@ async function deleteConnection(id) {
     openConnectionDeleteModal();
 }
 
+async function resetConnectionPath(id) {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
+    if (!id) return;
+    const connection = connections.find(c => String(c.id) === String(id));
+    if (connection) {
+        connection.path = [];
+    }
+    try {
+        await fetch('api/map_links.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'update_path',
+                id,
+                path: []
+            })
+        });
+        renderConnections();
+        showNotification('Line reset to default', 'success');
+    } catch (e) {
+        console.error(e);
+        showNotification('Failed to reset line', 'error');
+    }
+}
+
 function openConnectionDeleteModal() {
     const modal = document.getElementById('confirmDeleteModal');
     const msg = document.getElementById('confirmDeleteMessage');
@@ -1261,9 +1376,11 @@ async function discoverNodeInterfaces(deviceId) {
 
 // Helper: Get power class for styling
 function getPowerClass(power) {
-    if (power >= -10) return 'power-good';
-    if (power >= -20) return 'power-warning';
-    return 'power-critical';
+    if (!Number.isFinite(power)) return 'power-good';
+    if (power <= -40) return 'power-critical';
+    if (power <= -25) return 'power-critical';
+    if (power <= -18) return 'power-warning';
+    return 'power-good';
 }
 
 // Use global toast notifications when available
@@ -1355,6 +1472,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const linkList = document.getElementById('linkList');
     if (linkList) {
         linkList.addEventListener('click', (e) => {
+            const resetBtn = e.target.closest('[data-reset-connection]');
+            if (resetBtn) {
+                e.preventDefault();
+                resetConnectionPath(resetBtn.getAttribute('data-reset-connection'));
+                return;
+            }
             const btn = e.target.closest('[data-delete-connection]');
             if (!btn) return;
             e.preventDefault();
@@ -1392,6 +1515,12 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleLineEdit();
         });
     }
+
+    // Auto refresh map data every 60s
+    setInterval(() => {
+        if (document.hidden) return;
+        loadMapData();
+    }, 60000);
 
     initMap();
 });

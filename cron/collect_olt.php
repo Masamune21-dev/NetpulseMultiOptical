@@ -51,6 +51,7 @@ $dir = "{$base}/{$oltId}";
 if (!is_dir($dir)) {
     mkdir($dir, 0755, true);
 }
+$olt['debug_dir'] = $dir;
 
 /* ======================
    COLLECT DATA

@@ -201,10 +201,10 @@ crontab -e
 ```
 ## 🔹 OLT Collection
 
-### ✅ 2 OLT (paralel)
+### 1 OLT 
 
 ```bash
-* * * * * flock -n /tmp/collect_olt.lock /bin/bash -c '/usr/bin/php /var/www/NetpulseMultiOptical/cron/collect_olt.php olt-1 >> /var/www/NetpulseMultiOptical/cron/olt_cron.>
+*/10 * * * * /usr/bin/php /var/www/mikrotik-crs-monitor/cron/collect_olt.php olt-1 >> /var/www/mikrotik-crs-monitor/logs/olt_cron.log 2>&1
 ```
 
 # 🧪 Manual Test

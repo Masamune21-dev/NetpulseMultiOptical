@@ -18,7 +18,7 @@ class Auth
             session_name('MikrotikMonitor');
 
             session_set_cookie_params([
-                'lifetime' => 86400,
+                'lifetime' => 604800,
                 'path' => '/',
                 'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
                 'httponly' => true,
@@ -184,12 +184,15 @@ class Auth
         }
 
         // Basic session validation
-        $session_timeout = 28800; // 8 hours
+        $session_timeout = 604800; // 7 days
 
         if (time() - $_SESSION['login_time'] > $session_timeout) {
             $this->logout();
             return false;
         }
+
+        // Sliding expiration on activity
+        $_SESSION['login_time'] = time();
 
         return true;
     }
