@@ -5,20 +5,30 @@ let nodes = [];
 let connections = [];
 let selectedNode = null;
 let nodeMarkers = [];
-let connectionLines = [];
+let markerById = new Map();
 let clickedLatLng = null;
 let mapRefreshPaused = false;
+let connectionLayer = null;
+let gridOverlay = null;
+let connectionsVisible = true;
+let gridVisible = true;
+let manualLinks = [];
+let pendingConnectionDeleteId = null;
+let lineEditMode = false;
+let connectionPolylines = new Map();
+let activeConnectionId = null;
+let editHandleLayer = null;
 
 
 // Icon definitions
 const nodeIcons = {
-    router: { icon: 'fa-router', color: '#667eea' },
-    switch: { icon: 'fa-server', color: '#f093fb' },
-    firewall: { icon: 'fa-shield-alt', color: '#f5576c' },
-    ap: { icon: 'fa-wifi', color: '#4facfe' },
-    server: { icon: 'fa-server', color: '#43e97b' },
-    client: { icon: 'fa-desktop', color: '#fa709a' },
-    cloud: { icon: 'fa-cloud', color: '#a8edea' }
+    router: { icon: 'fa-router', color: '#6366f1' },
+    switch: { icon: 'fa-server', color: '#6366f1' },
+    firewall: { icon: 'fa-shield-alt', color: '#6366f1' },
+    ap: { icon: 'fa-wifi', color: '#6366f1' },
+    server: { icon: 'fa-server', color: '#6366f1' },
+    client: { icon: 'fa-desktop', color: '#6366f1' },
+    cloud: { icon: 'fa-cloud', color: '#6366f1' }
 };
 
 // Initialize Map
@@ -35,6 +45,10 @@ function initMap() {
     }).addTo(map);
 
     map.on('click', function (e) {
+        if (lineEditMode) {
+            clearConnectionSelection();
+            return;
+        }
 
         clickedLatLng = e.latlng;
 
@@ -58,6 +72,7 @@ function initMap() {
                 mapLocked = true;
             }
         } catch (e) {}
+        connectionLayer = L.layerGroup().addTo(map);
         loadMapData();
         loadAvailableDevices();
     });
@@ -142,6 +157,7 @@ async function loadMapData() {
         // Clear existing markers
         nodeMarkers.forEach(marker => map.removeLayer(marker));
         nodeMarkers = [];
+        markerById = new Map();
 
         // Create new markers
         nodes.forEach(node => {
@@ -149,6 +165,10 @@ async function loadMapData() {
         });
 
         applyLockState(false);
+
+        await loadMapLinks();
+        buildConnections();
+        renderConnections();
 
         // Update device filter
         updateDeviceFilter();
@@ -200,6 +220,7 @@ function createNodeMarker(node) {
     // Store reference
     marker.nodeData = node;
     nodeMarkers.push(marker);
+    markerById.set(node.id, marker);
 
     // Add click event
     marker.on('click', function (e) {
@@ -216,6 +237,230 @@ function createNodeMarker(node) {
     }
 
     return marker;
+}
+
+function parsePath(raw) {
+    if (!raw) return [];
+    try {
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+            .map(p => {
+                if (Array.isArray(p) && p.length >= 2) {
+                    return { lat: Number(p[0]), lng: Number(p[1]) };
+                }
+                if (p && typeof p === 'object') {
+                    return { lat: Number(p.lat), lng: Number(p.lng) };
+                }
+                return null;
+            })
+            .filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+    } catch (e) {
+        return [];
+    }
+}
+
+function buildConnections() {
+    connections = manualLinks.map(link => ({
+        id: link.id,
+        fromId: link.node_a_id,
+        toId: link.node_b_id,
+        interfaceA: link.interface_a_name,
+        interfaceB: link.interface_b_name,
+        statusA: link.interface_a_status,
+        statusB: link.interface_b_status,
+        attenuation: link.attenuation_db,
+        rxA: link.interface_a_rx,
+        txA: link.interface_a_tx,
+        rxB: link.interface_b_rx,
+        txB: link.interface_b_tx,
+        path: parsePath(link.path_json)
+    }));
+}
+
+function computeLinkAttenuation(connection) {
+    const rxA = Number(connection.rxA);
+    const rxB = Number(connection.rxB);
+    if (Number.isFinite(rxA) && Number.isFinite(rxB)) {
+        return (rxA + rxB) / 2;
+    }
+    if (Number.isFinite(rxA)) return rxA;
+    if (Number.isFinite(rxB)) return rxB;
+    return null;
+}
+
+function getConnectionLatLngs(connection) {
+    const fromMarker = markerById.get(connection.fromId);
+    const toMarker = markerById.get(connection.toId);
+    if (!fromMarker || !toMarker) return null;
+    const fromLatLng = fromMarker.getLatLng();
+    const toLatLng = toMarker.getLatLng();
+    const midPoints = (connection.path || []).map(p => L.latLng(p.lat, p.lng));
+    return [fromLatLng, ...midPoints, toLatLng];
+}
+
+function setSelectedConnection(id) {
+    activeConnectionId = id;
+    connectionPolylines.forEach((line, lineId) => {
+        if (lineId === id) {
+            line.setStyle({ weight: 5, opacity: 0.95 });
+        } else {
+            line.setStyle({ weight: 3, opacity: 0.85 });
+        }
+    });
+}
+
+function clearConnectionSelection() {
+    activeConnectionId = null;
+    if (editHandleLayer) {
+        editHandleLayer.clearLayers();
+    }
+    connectionPolylines.forEach(line => {
+        line.setStyle({ weight: 3, opacity: 0.85 });
+    });
+}
+
+function refreshConnectionHandles(connection) {
+    if (!editHandleLayer) {
+        editHandleLayer = L.layerGroup().addTo(map);
+    }
+    editHandleLayer.clearLayers();
+    const points = connection.path || [];
+    points.forEach((pt, idx) => {
+        const marker = L.marker([pt.lat, pt.lng], {
+            draggable: true,
+            icon: L.divIcon({
+                className: 'line-handle',
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+            })
+        }).addTo(editHandleLayer);
+
+        marker.on('drag', () => {
+            const pos = marker.getLatLng();
+            connection.path[idx] = { lat: pos.lat, lng: pos.lng };
+            const line = connectionPolylines.get(connection.id);
+            if (line) {
+                const latlngs = getConnectionLatLngs(connection);
+                if (latlngs) line.setLatLngs(latlngs);
+            }
+        });
+
+        marker.on('dragend', () => {
+            saveConnectionPath(connection);
+        });
+
+        marker.on('click', (e) => {
+            const ev = e.originalEvent || {};
+            if (ev.altKey) {
+                connection.path.splice(idx, 1);
+                refreshConnectionHandles(connection);
+                const line = connectionPolylines.get(connection.id);
+                if (line) {
+                    const latlngs = getConnectionLatLngs(connection);
+                    if (latlngs) line.setLatLngs(latlngs);
+                }
+                saveConnectionPath(connection);
+            }
+        });
+    });
+}
+
+function addPointToConnection(connection, latlng) {
+    if (!connection.path) connection.path = [];
+    const latlngs = getConnectionLatLngs(connection);
+    if (!latlngs || latlngs.length < 2) return;
+
+    let bestIndex = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < latlngs.length - 1; i++) {
+        const p = map.latLngToLayerPoint(latlng);
+        const a = map.latLngToLayerPoint(latlngs[i]);
+        const b = map.latLngToLayerPoint(latlngs[i + 1]);
+        const dist = L.LineUtil.pointToSegmentDistance(p, a, b);
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestIndex = i;
+        }
+    }
+
+    connection.path.splice(bestIndex, 0, { lat: latlng.lat, lng: latlng.lng });
+    const line = connectionPolylines.get(connection.id);
+    if (line) {
+        const updated = getConnectionLatLngs(connection);
+        if (updated) line.setLatLngs(updated);
+    }
+    refreshConnectionHandles(connection);
+    saveConnectionPath(connection);
+}
+
+async function saveConnectionPath(connection) {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
+    try {
+        await fetch('api/map_links.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'update_path',
+                id: connection.id,
+                path: connection.path || []
+            })
+        });
+    } catch (e) {
+        console.error(e);
+        showNotification('Failed to save line path', 'error');
+    }
+}
+
+function renderConnections() {
+    if (!connectionLayer) return;
+    connectionLayer.clearLayers();
+    connectionPolylines.clear();
+
+    if (!connectionsVisible) {
+        return;
+    }
+
+    connections.forEach(connection => {
+        const latlngs = getConnectionLatLngs(connection);
+        if (!latlngs) return;
+        const fromMarker = markerById.get(connection.fromId);
+        const toMarker = markerById.get(connection.toId);
+        if (!fromMarker || !toMarker) return;
+        if (!map.hasLayer(fromMarker) || !map.hasLayer(toMarker)) return;
+        const weight = 3;
+        const actualAtt = computeLinkAttenuation(connection);
+        let color = 'rgba(16, 185, 129, 0.85)';
+        if (Number.isFinite(actualAtt) && actualAtt <= -40) {
+            color = 'rgba(239, 68, 68, 0.85)';
+        }
+
+        const line = L.polyline(latlngs, {
+            color,
+            weight,
+            dashArray: lineEditMode ? null : '6 6',
+            className: lineEditMode ? 'connection-line editable' : 'connection-line',
+            interactive: lineEditMode
+        });
+
+        line.addTo(connectionLayer);
+        connectionPolylines.set(connection.id, line);
+
+        line.on('click', (e) => {
+            if (!lineEditMode) return;
+            L.DomEvent.stopPropagation(e);
+            const ev = e.originalEvent || {};
+            setSelectedConnection(connection.id);
+            refreshConnectionHandles(connection);
+            if (ev.shiftKey) {
+                addPointToConnection(connection, e.latlng);
+            }
+        });
+    });
+
+    if (!lineEditMode) {
+        clearConnectionSelection();
+    }
 }
 
 // Select node and show details
@@ -603,6 +848,7 @@ async function updateNodePosition(nodeId, latLng) {
         })
     });
 
+    renderConnections();
 }
 
 
@@ -614,6 +860,28 @@ function toggleLock() {
     } catch (e) {}
     setAllNodesLock(mapLocked);
 
+}
+
+function toggleLineEdit() {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
+    lineEditMode = !lineEditMode;
+    const btn = document.getElementById('lineEditBtn');
+    if (btn) {
+        if (lineEditMode) {
+            btn.innerHTML = '<i class="fas fa-pen"></i> Editing Lines';
+            btn.classList.remove('btn-outline');
+        } else {
+            btn.innerHTML = '<i class="fas fa-bezier-curve"></i> Edit Lines';
+            btn.classList.add('btn-outline');
+        }
+    }
+    renderConnections();
+    showNotification(
+        lineEditMode
+            ? 'Edit mode aktif: klik line untuk pilih, shift+klik untuk tambah titik, alt+klik titik untuk hapus.'
+            : 'Edit mode nonaktif',
+        'info'
+    );
 }
 
 async function setAllNodesLock(lockState) {
@@ -710,6 +978,226 @@ function filterNodes() {
             map.removeLayer(marker);
         }
     });
+
+    renderConnections();
+}
+
+async function loadMapLinks() {
+    try {
+        const response = await fetch('api/map_links.php');
+        manualLinks = await response.json();
+        updateConnectionList();
+    } catch (error) {
+        console.error('Error loading map links:', error);
+    }
+}
+
+function updateConnectionList() {
+    const list = document.getElementById('linkList');
+    if (!list) return;
+    if (!manualLinks.length) {
+        list.innerHTML = '<div class="connection-item"><small>No connections yet.</small></div>';
+        return;
+    }
+    list.innerHTML = manualLinks.map(link => `
+        <div class="connection-item">
+            <div>
+                <div><strong>${link.node_a_name}</strong> (${link.interface_a_name})</div>
+                <small>↔</small>
+                <div><strong>${link.node_b_name}</strong> (${link.interface_b_name})</div>
+                ${link.attenuation_db !== null ? `<small>Att: ${parseFloat(link.attenuation_db).toFixed(2)} dB</small>` : ''}
+            </div>
+            <button class="btn btn-sm btn-danger" type="button" data-delete-connection="${link.id}">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function populateNodeSelect(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Select Node --</option>';
+    nodes.forEach(node => {
+        select.innerHTML += `<option value="${node.id}">${node.node_name}</option>`;
+    });
+}
+
+async function populateInterfaceSelect(nodeId, selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Select Interface --</option>';
+    const node = nodes.find(n => n.id == nodeId);
+    if (!node || !node.device_id) return;
+
+    try {
+        const response = await fetch(`api/interfaces.php?device_id=${node.device_id}`);
+        const ifaces = await response.json();
+        ifaces.forEach(iface => {
+            const label = iface.if_name || iface.if_alias || `if-${iface.if_index}`;
+            const rx = iface.rx_power !== null && iface.rx_power !== undefined ? iface.rx_power : '';
+            const tx = iface.tx_power !== null && iface.tx_power !== undefined ? iface.tx_power : '';
+            select.innerHTML += `<option value="${iface.id}" data-rx="${rx}" data-tx="${tx}">${label}</option>`;
+        });
+    } catch (e) {
+        console.error('Error loading interfaces:', e);
+    }
+}
+
+function openAddLinkModal() {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
+    document.getElementById('addLinkModal').style.display = 'flex';
+    populateNodeSelect('linkNodeA');
+    populateNodeSelect('linkNodeB');
+    updateConnectionList();
+}
+
+function computeAttenuation() {
+    const selectA = document.getElementById('linkInterfaceA');
+    const selectB = document.getElementById('linkInterfaceB');
+    const attenuationInput = document.getElementById('linkAttenuation');
+    if (!selectA || !selectB || !attenuationInput) return;
+
+    const optionA = selectA.options[selectA.selectedIndex];
+    const optionB = selectB.options[selectB.selectedIndex];
+    if (!optionA || !optionB) return;
+
+    const txA = parseFloat(optionA.getAttribute('data-tx'));
+    const rxA = parseFloat(optionA.getAttribute('data-rx'));
+    const txB = parseFloat(optionB.getAttribute('data-tx'));
+    const rxB = parseFloat(optionB.getAttribute('data-rx'));
+
+    const values = [];
+    if (!Number.isNaN(txA) && !Number.isNaN(rxB)) {
+        values.push(txA - rxB);
+    }
+    if (!Number.isNaN(txB) && !Number.isNaN(rxA)) {
+        values.push(txB - rxA);
+    }
+
+    if (values.length) {
+        const avg = values.reduce((a, b) => a + b, 0) / values.length;
+        attenuationInput.value = avg.toFixed(2);
+        return;
+    }
+
+    // Fallback: show average RX (negative dBm) if TX not available
+    if (!Number.isNaN(rxA) && !Number.isNaN(rxB)) {
+        const avgRx = (rxA + rxB) / 2;
+        attenuationInput.value = avgRx.toFixed(2);
+    }
+}
+
+function closeLinkModal() {
+    document.getElementById('addLinkModal').style.display = 'none';
+}
+
+async function addConnection() {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
+    const nodeA = document.getElementById('linkNodeA').value;
+    const nodeB = document.getElementById('linkNodeB').value;
+    const ifaceA = document.getElementById('linkInterfaceA').value;
+    const ifaceB = document.getElementById('linkInterfaceB').value;
+    const attenuationRaw = document.getElementById('linkAttenuation').value;
+    const notes = document.getElementById('linkNotes').value;
+
+    if (!nodeA || !nodeB || !ifaceA || !ifaceB) {
+        showNotification('Please select node and interface for both sides', 'warning');
+        return;
+    }
+
+    if (String(nodeA) === String(nodeB)) {
+        showNotification('Node A and Node B must be different', 'warning');
+        return;
+    }
+
+    let attenuation = null;
+    if (attenuationRaw !== '') {
+        const normalized = attenuationRaw.replace(',', '.');
+        const parsed = parseFloat(normalized);
+        if (Number.isNaN(parsed)) {
+            showNotification('Attenuation value is not valid', 'warning');
+            return;
+        }
+        attenuation = parsed;
+    }
+
+    try {
+        const response = await fetch('api/map_links.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                node_a_id: nodeA,
+                node_b_id: nodeB,
+                interface_a_id: ifaceA,
+                interface_b_id: ifaceB,
+                attenuation_db: attenuation,
+                notes
+            })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showNotification('Connection saved', 'success');
+            await loadMapLinks();
+            buildConnections();
+            renderConnections();
+        } else {
+            showNotification(result.error || 'Failed to save connection', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification('Failed to save connection', 'error');
+    }
+}
+
+async function deleteConnection(id) {
+    if (window.roleUtils && !window.roleUtils.requireAdmin()) return;
+    if (!id) {
+        showNotification('Invalid connection id', 'warning');
+        return;
+    }
+    pendingConnectionDeleteId = id;
+    openConnectionDeleteModal();
+}
+
+function openConnectionDeleteModal() {
+    const modal = document.getElementById('confirmDeleteModal');
+    const msg = document.getElementById('confirmDeleteMessage');
+    if (!modal) {
+        if (confirm('Hapus connection ini?')) {
+            runConnectionDelete();
+        }
+        return;
+    }
+    if (msg) msg.textContent = 'Hapus connection ini?';
+    modal.style.display = 'flex';
+}
+
+async function runConnectionDelete() {
+    const id = pendingConnectionDeleteId;
+    if (!id) return;
+    pendingConnectionDeleteId = null;
+    try {
+        showNotification('Deleting connection...', 'info');
+        const response = await fetch('api/map_links.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', id })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showNotification('Connection deleted', 'success');
+            await loadMapLinks();
+            buildConnections();
+            renderConnections();
+        } else {
+            showNotification(result.error || 'Delete failed', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification('Delete failed', 'error');
+    }
 }
 
 // Update device filter dropdown
@@ -810,6 +1298,85 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.map-controls').classList.toggle('open');
     });
 
+    gridOverlay = document.getElementById('gridOverlay');
+    const gridToggle = document.getElementById('showGrid');
+    if (gridToggle && gridOverlay) {
+        gridVisible = gridToggle.checked;
+        gridOverlay.style.display = gridVisible ? 'block' : 'none';
+        gridToggle.addEventListener('change', () => {
+            gridVisible = gridToggle.checked;
+            gridOverlay.style.display = gridVisible ? 'block' : 'none';
+        });
+    }
+
+    const connectionsToggle = document.getElementById('showConnections');
+    if (connectionsToggle) {
+        connectionsVisible = connectionsToggle.checked;
+        connectionsToggle.addEventListener('change', () => {
+            connectionsVisible = connectionsToggle.checked;
+            if (connectionLayer) {
+                if (connectionsVisible) {
+                    if (!map.hasLayer(connectionLayer)) {
+                        connectionLayer.addTo(map);
+                    }
+                    renderConnections();
+                } else {
+                    map.removeLayer(connectionLayer);
+                }
+            }
+        });
+    }
+
+    const nodeASelect = document.getElementById('linkNodeA');
+    const nodeBSelect = document.getElementById('linkNodeB');
+    if (nodeASelect) {
+        nodeASelect.addEventListener('change', (e) => {
+            populateInterfaceSelect(e.target.value, 'linkInterfaceA');
+        });
+    }
+    if (nodeBSelect) {
+        nodeBSelect.addEventListener('change', (e) => {
+            populateInterfaceSelect(e.target.value, 'linkInterfaceB');
+        });
+    }
+    const ifaceASelect = document.getElementById('linkInterfaceA');
+    const ifaceBSelect = document.getElementById('linkInterfaceB');
+    if (ifaceASelect) {
+        ifaceASelect.addEventListener('change', () => {
+            computeAttenuation();
+        });
+    }
+    if (ifaceBSelect) {
+        ifaceBSelect.addEventListener('change', () => {
+            computeAttenuation();
+        });
+    }
+
+    const linkList = document.getElementById('linkList');
+    if (linkList) {
+        linkList.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-delete-connection]');
+            if (!btn) return;
+            e.preventDefault();
+            deleteConnection(btn.getAttribute('data-delete-connection'));
+        });
+    }
+
+    const confirmYes = document.getElementById('confirmDeleteYes');
+    if (confirmYes) {
+        confirmYes.addEventListener('click', () => {
+            if (pendingConnectionDeleteId) {
+                if (typeof closeDeleteModal === 'function') {
+                    closeDeleteModal();
+                } else {
+                    const modal = document.getElementById('confirmDeleteModal');
+                    if (modal) modal.style.display = 'none';
+                }
+                runConnectionDelete();
+            }
+        });
+    }
+
     const lockBtn = document.getElementById('lockBtn');
     if (lockBtn) {
         lockBtn.addEventListener('click', (e) => {
@@ -818,8 +1385,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const lineEditBtn = document.getElementById('lineEditBtn');
+    if (lineEditBtn) {
+        lineEditBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleLineEdit();
+        });
+    }
+
     initMap();
 });
+
 
 // Resume refresh when tab becomes active
 document.addEventListener('visibilitychange', () => {

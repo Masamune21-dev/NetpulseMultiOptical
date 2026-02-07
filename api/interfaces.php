@@ -45,7 +45,7 @@ try {
     }
 
     // Bangun query dinamis
-    $selectColumns = ['if_index', 'if_name', 'optical_index', 'rx_power', 'last_seen', 'is_sfp'];
+    $selectColumns = ['id', 'if_index', 'if_name', 'optical_index', 'rx_power', 'last_seen', 'is_sfp'];
 
     // Tambahkan tx_power jika ada
     if (in_array('tx_power', $columns)) {

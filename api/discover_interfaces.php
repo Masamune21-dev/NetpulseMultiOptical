@@ -180,11 +180,15 @@ foreach ($ifIndex as $i => $raw) {
 }
 
 /* ambil optical-name */
-$opticalNames = snmp2_walk(
+$opticalNames = @snmp2_walk(
     $ip,
     $community,
     '1.3.6.1.4.1.14988.1.1.19.1.1.2'
 );
+
+if ($opticalNames === false) {
+    $opticalNames = [];
+}
 
 foreach ($opticalNames as $oid => $val) {
     $optIfName = trim(str_replace(['STRING:', '"'], '', $val));

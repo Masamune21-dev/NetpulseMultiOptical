@@ -205,6 +205,33 @@ CREATE TABLE `map_nodes` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `map_links`
+--
+
+DROP TABLE IF EXISTS `map_links`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `map_links` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `node_a_id` int NOT NULL,
+  `node_b_id` int NOT NULL,
+  `interface_a_id` int NOT NULL,
+  `interface_b_id` int NOT NULL,
+  `attenuation_db` decimal(6,2) DEFAULT NULL,
+  `notes` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_nodes` (`node_a_id`,`node_b_id`),
+  KEY `idx_interfaces` (`interface_a_id`,`interface_b_id`),
+  CONSTRAINT `fk_map_links_node_a` FOREIGN KEY (`node_a_id`) REFERENCES `map_nodes` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_map_links_node_b` FOREIGN KEY (`node_b_id`) REFERENCES `map_nodes` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_map_links_iface_a` FOREIGN KEY (`interface_a_id`) REFERENCES `interfaces` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_map_links_iface_b` FOREIGN KEY (`interface_b_id`) REFERENCES `interfaces` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `settings`
 --
 

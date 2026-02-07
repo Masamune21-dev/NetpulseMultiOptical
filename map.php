@@ -16,12 +16,70 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
             <button class="btn btn-outline" id="lockBtn">
                 <i class="fas fa-lock-open"></i> Unlocked
             </button>
+            <button class="btn btn-outline" onclick="openAddLinkModal()">
+                <i class="fas fa-link"></i> Add Connection
+            </button>
+            <button class="btn btn-outline" id="lineEditBtn">
+                <i class="fas fa-bezier-curve"></i> Edit Lines
+            </button>
             <button class="btn action-create" onclick="openAddNodeModal()">
                 <i class="fas fa-plus"></i> Add Node
             </button>
             <button class="btn btn-primary" onclick="refreshMap()">
                 <i class="fas fa-sync"></i> Refresh
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Add Connection -->
+<div class="modal" id="addLinkModal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeLinkModal()">&times;</button>
+        <h3><i class="fas fa-link"></i> Add Connection</h3>
+
+        <div class="form-group">
+            <label>Node A</label>
+            <select id="linkNodeA" class="monitoring-select"></select>
+        </div>
+
+        <div class="form-group">
+            <label>Interface A</label>
+            <select id="linkInterfaceA" class="monitoring-select"></select>
+        </div>
+
+        <div class="form-group">
+            <label>Node B</label>
+            <select id="linkNodeB" class="monitoring-select"></select>
+        </div>
+
+        <div class="form-group">
+            <label>Interface B</label>
+            <select id="linkInterfaceB" class="monitoring-select"></select>
+        </div>
+
+        <div class="form-group">
+            <label>Attenuation (dB)</label>
+            <input type="number" step="0.01" id="linkAttenuation" placeholder="e.g. -18.50">
+        </div>
+
+        <div class="form-group">
+            <label>Notes</label>
+            <input type="text" id="linkNotes" placeholder="Optional">
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="addConnection()">
+                <i class="fas fa-link"></i> Save Connection
+            </button>
+            <button class="btn btn-outline" onclick="closeLinkModal()">
+                Cancel
+            </button>
+        </div>
+
+        <div class="form-group" style="margin-top: 16px;">
+            <label>Existing Connections</label>
+            <div id="linkList" class="connection-list"></div>
         </div>
     </div>
 </div>
@@ -67,6 +125,7 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
 
     <!-- Map Area -->
     <div id="networkMap"></div>
+    <div id="gridOverlay" class="grid-layer" aria-hidden="true"></div>
 </div>
 
 <!-- Node Detail Sidebar -->
@@ -411,32 +470,14 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
     }
 
-    .node-icon-large.router {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-
-    .node-icon-large.switch {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-
-    .node-icon-large.firewall {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-
-    .node-icon-large.ap {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    }
-
-    .node-icon-large.server {
-        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-    }
-
-    .node-icon-large.client {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    }
-
+    .node-icon-large.router,
+    .node-icon-large.switch,
+    .node-icon-large.firewall,
+    .node-icon-large.ap,
+    .node-icon-large.server,
+    .node-icon-large.client,
     .node-icon-large.cloud {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        background: var(--primary-gradient);
     }
 
     .node-title h4 {
@@ -519,6 +560,48 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         font-size: 0.85rem;
     }
 
+    .connection-list {
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 10px;
+        max-height: 220px;
+        overflow: auto;
+        padding: 8px;
+        background: rgba(0, 0, 0, 0.02);
+    }
+
+    .connection-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        margin-bottom: 8px;
+    }
+
+    .connection-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .connection-item small {
+        color: var(--text-secondary);
+    }
+
+    .connection-line.editable {
+        cursor: pointer;
+    }
+
+    .line-handle {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 2px solid #6366f1;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
     .interfaces-section code {
         background: rgba(99, 102, 241, 0.1);
         padding: 2px 6px;
@@ -581,16 +664,17 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
     }
 
     .node-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
+        width: 34px;
+        height: 34px;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
         transform-origin: center center;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 16px;
+        font-size: 14px;
         color: white;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
         transition: all 0.2s ease;
         position: relative;
     }
@@ -599,51 +683,38 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         content: "";
         position: absolute;
         inset: -2px;
-        border-radius: 50%;
+        border-radius: 50% 50% 50% 0;
         border: 2px solid white;
         pointer-events: none;
     }
 
-    .node-icon.router {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    .node-icon i {
+        transform: rotate(45deg);
     }
 
-    .node-icon.switch {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-
-    .node-icon.firewall {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-
-    .node-icon.ap {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    }
-
-    .node-icon.server {
-        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-    }
-
-    .node-icon.client {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    }
-
+    .node-icon.router,
+    .node-icon.switch,
+    .node-icon.firewall,
+    .node-icon.ap,
+    .node-icon.server,
+    .node-icon.client,
     .node-icon.cloud {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        background: var(--primary-gradient);
     }
 
     .node-icon:hover {
-        transform: scale(1.1);
+        transform: rotate(-45deg) scale(1.1);
     }
 
     .node-status {
         position: absolute;
-        top: -5px;
-        right: -5px;
-        width: 20px;
-        height: 20px;
+        top: -6px;
+        right: -6px;
+        width: 18px;
+        height: 18px;
         border-radius: 50%;
         border: 2px solid white;
+        transform: rotate(45deg);
     }
 
     .node-status.up {
@@ -691,9 +762,8 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
 
     /* Connection Lines */
     .connection-line {
-        stroke: rgba(100, 116, 139, 0.4);
-        stroke-width: 2;
-        stroke-dasharray: 5, 5;
+        stroke-width: 3;
+        stroke-dasharray: 6 6;
         animation: dash 20s linear infinite;
     }
 
@@ -703,6 +773,7 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         }
     }
 
+
     /* Grid Layer */
     .grid-layer {
         position: absolute;
@@ -711,6 +782,7 @@ if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'technician', 'viewer'])) {
         width: 100%;
         height: 100%;
         pointer-events: none;
+        z-index: 2;
         background-image:
             linear-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px),
             linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1px, transparent 1px);

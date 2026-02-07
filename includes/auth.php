@@ -20,7 +20,7 @@ class Auth
             session_set_cookie_params([
                 'lifetime' => 86400,
                 'path' => '/',
-                'secure' => true,
+                'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
                 'httponly' => true,
                 'samesite' => 'Lax'
             ]);

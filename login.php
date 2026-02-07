@@ -54,25 +54,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - NetPulse MultiOptical</title>
+    <script>
+        (function () {
+            try {
+                var theme = localStorage.getItem('theme');
+                if (theme) {
+                    document.documentElement.setAttribute('data-theme', theme);
+                }
+            } catch (e) { }
+        })();
+    </script>
+    <link rel="stylesheet" href="assets/css/style.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
+        body.login-page {
             min-height: 100vh;
-            font-family: 'Segoe UI', system-ui, sans-serif;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            background-color: #f8fafc;
+            background: var(--bg);
+            color: var(--text);
+            position: relative;
+            overflow-x: hidden;
         }
 
         /* ================= LEFT PANEL ================= */
         .login-left {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            background: var(--sidebar);
             color: white;
             display: flex;
             flex-direction: column;
@@ -111,13 +118,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .logo-icon {
             width: 42px;
             height: 42px;
-            background: linear-gradient(135deg, #8b5cf6, #6366f1);
-            border-radius: 10px;
+            background: var(--primary-gradient);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
             font-size: 18px;
+            box-shadow: var(--shadow-sm);
         }
 
         .logo-text {
@@ -130,12 +138,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .login-left h1 {
-            font-size: 2.6rem;
+            font-size: 2.4rem;
             letter-spacing: -0.5px;
             font-weight: 800;
             line-height: 1.2;
             margin-bottom: 1.5rem;
-            background: linear-gradient(to right, #fff, rgba(255, 255, 255, 0.8));
+            background: linear-gradient(to right, #fff, rgba(255, 255, 255, 0.85));
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -159,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: flex;
             align-items: center;
             gap: 12px;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
         }
 
         .feature-icon {
@@ -168,16 +176,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: flex;
             align-items: center;
             justify-content: center;
+            color: rgba(255, 255, 255, 0.9);
         }
 
         /* ================= RIGHT PANEL ================= */
         .login-right {
-            background: #ffffff;
+            background: var(--surface);
             display: flex;
             flex-direction: column;
             justify-content: center;
             padding: 0 4rem;
-            box-shadow: -20px 0 60px rgba(0, 0, 0, 0.05);
+            box-shadow: -20px 0 60px rgba(0, 0, 0, 0.06);
             position: relative;
             z-index: 3;
         }
@@ -186,6 +195,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             max-width: 380px;
             width: 100%;
             margin: 0 auto;
+            background: var(--surface);
+            border: var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 2rem 2.25rem;
+            box-shadow: var(--shadow-md);
+            backdrop-filter: var(--backdrop-blur);
         }
 
         .login-header {
@@ -195,26 +210,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .login-header h2 {
             font-size: 1.75rem;
             font-weight: 700;
-            color: #1f2937;
+            color: var(--text);
             margin-bottom: 0.5rem;
             letter-spacing: -0.3px;
         }
 
         .login-header p {
-            color: #6b7280;
+            color: var(--text-soft);
             font-size: 0.9rem;
         }
 
         /* ================= ALERT ================= */
         .alert {
             padding: 1rem 1.25rem;
-            border-radius: 12px;
+            border-radius: var(--radius-md);
             font-size: 0.95rem;
             margin-bottom: 1.5rem;
             display: flex;
             align-items: flex-start;
             gap: 10px;
             animation: slideIn 0.3s ease-out;
+            backdrop-filter: var(--backdrop-blur);
+            border: var(--glass-border);
         }
 
         @keyframes slideIn {
@@ -230,15 +247,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .alert-error {
-            background: #fef2f2;
-            color: #dc2626;
-            border-left: 4px solid #dc2626;
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
         }
 
         .alert-success {
-            background: #f0fdf4;
-            color: #16a34a;
-            border-left: 4px solid #16a34a;
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--success);
+            border-left: 4px solid var(--success);
         }
 
         .alert-icon {
@@ -255,7 +272,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: block;
             font-size: 0.9rem;
             font-weight: 500;
-            color: #374151;
+            color: var(--text-soft);
             margin-bottom: 0.5rem;
         }
 
@@ -264,61 +281,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .input-group:focus-within .input-icon {
-            color: #6366f1;
+            color: var(--primary);
         }
 
         /* PERBAIKAN UTAMA: Placeholder styling */
-        .form-control {
+        .login-page .form-control {
             width: 100%;
-            padding: 0.9rem 1rem 0.9rem 3.4rem;
-            border-radius: 10px;
-            border: 1.5px solid #e5e7eb;
+            padding: 0.9rem 1rem 0.9rem 3.6rem;
+            border-radius: var(--radius-md);
+            border: 2px solid var(--border);
             font-size: 1rem;
             transition: all 0.2s ease;
-            background: linear-gradient(#f9fafb, #f3f4f6);
-            color: #1f2937;
+            background: var(--surface-glass);
+            color: var(--text);
         }
 
         /* Placeholder untuk semua browser */
         .form-control::placeholder {
-            color: #9ca3af;
+            color: var(--text-soft);
             opacity: 1;
             font-size: 0.95rem;
         }
 
         .form-control::-webkit-input-placeholder {
-            color: #9ca3af;
+            color: var(--text-soft);
             opacity: 1;
             font-size: 0.95rem;
         }
 
         .form-control::-moz-placeholder {
-            color: #9ca3af;
+            color: var(--text-soft);
             opacity: 1;
             font-size: 0.95rem;
         }
 
         .form-control:-ms-input-placeholder {
-            color: #9ca3af;
+            color: var(--text-soft);
             opacity: 1;
             font-size: 0.95rem;
         }
 
         .form-control:-moz-placeholder {
-            color: #9ca3af;
+            color: var(--text-soft);
             opacity: 1;
             font-size: 0.95rem;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: #6366f1;
-            background-color: #ffffff;
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            border-color: var(--primary);
+            background-color: var(--surface);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
         }
 
         .form-control:focus::placeholder {
-            color: #d1d5db;
+            color: rgba(148, 163, 184, 0.6);
         }
 
         /* PERBAIKAN: Input icon positioning */
@@ -327,7 +344,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             left: 1.1rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #9ca3af;
+            color: var(--text-soft);
             width: 16px;
             height: 16px;
             display: flex;
@@ -338,8 +355,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         /* Password field styling */
-        .password-field {
-            padding-right: 3.4rem !important;
+        .login-page .password-field {
+            padding-right: 3.6rem !important;
         }
 
         .password-toggle {
@@ -349,7 +366,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transform: translateY(-50%);
             background: none;
             border: none;
-            color: #6b7280;
+            color: var(--text-soft);
             cursor: pointer;
             padding: 0.25rem;
             border-radius: 4px;
@@ -363,8 +380,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .password-toggle:hover {
-            color: #4b5563;
-            background: rgba(0, 0, 0, 0.05);
+            color: var(--text);
+            background: var(--surface-glass);
         }
 
         .password-toggle i {
@@ -376,7 +393,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: block;
             margin-top: 0.4rem;
             font-size: 0.8rem;
-            color: #6b7280;
+            color: var(--text-soft);
             font-style: italic;
         }
 
@@ -386,7 +403,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 1rem;
             border-radius: 10px;
             border: none;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            background: var(--primary-gradient);
             color: white;
             font-weight: 600;
             font-size: 1rem;
@@ -398,6 +415,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             gap: 10px;
             margin-top: 0.5rem;
             letter-spacing: 0.3px;
+            box-shadow: var(--primary-shadow);
         }
 
         .btn-login:hover {
@@ -424,28 +442,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .login-footer {
             margin-top: 2.5rem;
             padding-top: 1.5rem;
-            border-top: 1px solid #e5e7eb;
+            border-top: 1px solid var(--border);
             text-align: center;
-            color: #6b7280;
+            color: var(--text-soft);
             font-size: 0.85rem;
             opacity: 0.85;
         }
 
         .login-footer a {
-            color: #6366f1;
+            color: var(--primary);
             text-decoration: none;
             font-weight: 500;
             transition: color 0.2s;
         }
 
         .login-footer a:hover {
-            color: #4f46e5;
+            color: var(--primary-soft);
             text-decoration: underline;
         }
 
         /* ================= RESPONSIVE ================= */
         @media (max-width: 1024px) {
-            body {
+            body.login-page {
                 grid-template-columns: 1fr;
             }
 
@@ -520,7 +538,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .shape-1 {
             width: 200px;
             height: 200px;
-            background: linear-gradient(135deg, #fbbf24, #f97316);
+            background: linear-gradient(135deg, #f59e0b, #f97316);
             top: 10%;
             right: -50px;
         }
@@ -528,7 +546,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .shape-2 {
             width: 150px;
             height: 150px;
-            background: linear-gradient(135deg, #10b981, #3b82f6);
+            background: linear-gradient(135deg, #06b6d4, #3b82f6);
             bottom: 15%;
             left: -30px;
         }
@@ -551,42 +569,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: #a8a8a8;
         }
         @media (max-width: 640px) {
-    body {
-        grid-template-columns: 1fr;
-    }
+            body.login-page {
+                grid-template-columns: 1fr;
+            }
 
-    /* sembunyikan panel kiri */
-    .login-left {
-        display: none;
-    }
+            /* sembunyikan panel kiri */
+            .login-left {
+                display: none;
+            }
 
-    /* panel kanan full screen */
-    .login-right {
-        display: flex;
-        min-height: 100vh;
-        padding: 2.5rem 1.5rem;
-        box-shadow: none;
-    }
+            /* panel kanan full screen */
+            .login-right {
+                display: flex;
+                min-height: 100vh;
+                padding: 2.5rem 1.5rem;
+                box-shadow: none;
+            }
 
-    /* login card lebih nyaman di HP */
-    .login-container {
-        max-width: 100%;
-        padding: 0;
-    }
+            /* login card lebih nyaman di HP */
+            .login-container {
+                max-width: 100%;
+                padding: 1.5rem;
+            }
 
-    .login-header {
-        text-align: center;
-    }
+            .login-header {
+                text-align: center;
+            }
 
-    .btn-login {
-        padding: 1rem;
-    }
-}
+            .btn-login {
+                padding: 1rem;
+            }
+        }
 
     </style>
 </head>
 
-<body>
+<body class="login-page">
     <!-- LEFT PANEL -->
     <div class="login-left">
         <div class="floating-shape shape-1"></div>
@@ -605,27 +623,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <h1>Network Optical Monitoring</h1>
             <p class="tagline">
-                Unified monitoring for Mikrotik CRS and Hisoso OLT
-                real-time visibility from core to last-mile.
+                Pantau semua perangkat optik dari core sampai last-mile,
+                realtime dan terukur.
             </p>
         </div>
 
         <div class="features">
             <div class="feature">
                 <div class="feature-icon"><i class="fas fa-check-circle"></i></div>
-                <span>CRS SFP optical power monitoring</span>
+                <span>Device Aktif & status monitoring</span>
             </div>
             <div class="feature">
                 <div class="feature-icon"><i class="fas fa-check-circle"></i></div>
-                <span>OLT PON interface & ONU status</span>
+                <span>Total Interface & trafik terpantau</span>
             </div>
             <div class="feature">
                 <div class="feature-icon"><i class="fas fa-check-circle"></i></div>
-                <span>Traffic & performance analytics</span>
+                <span>SFP Aktif dengan pembacaan power optik</span>
             </div>
             <div class="feature">
                 <div class="feature-icon"><i class="fas fa-check-circle"></i></div>
-                <span>Proactive alerts & degradation</span>
+                <span>Optical Critical untuk deteksi loss</span>
+            </div>
+            <div class="feature">
+                <div class="feature-icon"><i class="fas fa-check-circle"></i></div>
+                <span>OLT, PON, dan ONU terintegrasi</span>
+            </div>
+            <div class="feature">
+                <div class="feature-icon"><i class="fas fa-check-circle"></i></div>
+                <span>Manajemen user dan akses berbasis role</span>
             </div>
         </div>
 
@@ -635,8 +661,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-right">
         <div class="login-container">
             <div class="login-header">
-                <h2>Welcome Back</h2>
-                <p>Sign in to access your dashboard</p>
+                <h2>Selamat Datang</h2>
+                <p>Masuk untuk membuka dashboard monitoring</p>
             </div>
 
             <?php if ($error): ?>
@@ -679,14 +705,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <button type="submit" class="btn-login" id="loginButton">
-                    <span id="buttonText">Sign In</span>
+                    <span id="buttonText">Masuk</span>
                     <span class="btn-icon" id="buttonIcon"><i class="fas fa-arrow-right"></i></span>
                 </button>
             </form>
 
             <div class="login-footer">
-                <p>Need help? <a href="mailto:masamunekazuto21@gmeail.com">Contact support</a></p>
-                <p>© <?= date('Y') ?> NetpulseMultiOptical. Web ini dibuat oleh Masamune.</p>
+                <p>Butuh bantuan? <a href="mailto:masamunekazuto21@gmeail.com">Hubungi support</a></p>
+                <p>© <?= date('Y') ?> NetPulse MultiOptical. Web ini dibuat oleh Masamune.</p>
             </div>
         </div>
     </div>
