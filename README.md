@@ -17,12 +17,13 @@ Dirancang khusus untuk kebutuhan ISP / NOC.
 ---
 
 # 🖼️ Screenshots
-
-![Dashboard](assets/img/screencapture-vid-masamune-my-id-dashboard-php-2026-02-06-09_26_47.png)
-![Monitoring](assets/img/screencapture-vid-masamune-my-id-monitoring-php-2026-02-06-09_30_07.png)
-![Network Map](assets/img/screencapture-vid-masamune-my-id-map-php-2026-02-06-09_29_19.png)
-![Settings](assets/img/screencapture-vid-masamune-my-id-settings-php-2026-02-06-09_29_46.png)
-
+![Loginpage](assets/img/loginpage.png)
+![Dashboard](assets/img/dashboard.png)
+![Monitoring](assets/img/monitoring.png)
+![Network Map](assets/img/map.png)
+![Olt](assets/img/olt.png)
+![Settings](assets/img/seting-tema.png)
+![Settings](assets/img/seting-logs.png)
 # ✨ Features
 
 ## 🔦 Optical Monitoring
