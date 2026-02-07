@@ -200,16 +200,11 @@ crontab -e
 * * * * * /usr/bin/php /var/www/NetpulseMultiOptical/api/huawei_discover_optics.php >> /var/www/NetpulseMultiOptical/cron/huawei_cron.log 2>&1
 ```
 ## 🔹 OLT Collection
-### ✅ Option A — 1 OLT (recommended)
-Polling adaptif (tidak overlap, jalan secepat mungkin):
+
+### ✅ 2 OLT (paralel)
+
 ```bash
-* * * * * flock -n /tmp/olt.lock /usr/bin/php /var/www/NetpulseMultiOptical/cron/collect_olt.php olt-1 >> /var/www/NetpulseMultiOptical/cron/olt_cron.log 2>&1
-```
-### ✅ Option B — 2 OLT (paralel)
-Masing-masing OLT punya lock sendiri:
-```bash
-* * * * * flock -n /tmp/olt1.lock /usr/bin/php /var/www/NetpulseMultiOptical/cron/collect_olt.php olt-1 >> /var/www/NetpulseMultiOptical/cron/olt1.log 2>&1
-* * * * * flock -n /tmp/olt2.lock /usr/bin/php /var/www/NetpulseMultiOptical/cron/collect_olt.php olt-2 >> /var/www/NetpulseMultiOptical/cron/olt2.log 2>&1
+* * * * * flock -n /tmp/collect_olt.lock /bin/bash -c '/usr/bin/php /var/www/NetpulseMultiOptical/cron/collect_olt.php olt-1 >> /var/www/NetpulseMultiOptical/cron/olt_cron.>
 ```
 
 # 🧪 Manual Test
